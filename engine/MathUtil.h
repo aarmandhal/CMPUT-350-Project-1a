@@ -180,35 +180,108 @@ struct Rect {
         : topLeft(center.x - radius, center.y - radius), width(2 * radius), height(2 * radius) {}
 
     Rect& operator|=(const Rect& other) {
-        // TODO: write this code
+        // Finds the union of the two rectangles
+        // New top-left is the min corner of the two rectangles
+        // New bottom-right is the max corner of the two rectangles
+        float x_min_union = std::min(this->topLeft.x, other.topLeft.x);
+        float y_min_union = std::min(this->topLeft.y, other.topLeft.y);
+        float x_max_union = std::max(this->topLeft.x + this->width, other.topLeft.x + other.width);
+        float y_max_union =
+            std::max(this->topLeft.y + this->height, other.topLeft.y + other.height);
+
+        // Rebuild rectangle from the combined corners
+        this->topLeft.x = x_min_union;
+        this->topLeft.y = y_min_union;
+        this->width = x_max_union - x_min_union;
+        this->height = y_max_union - y_min_union;
+
         return *this;
     }
     Rect& operator|=(const Point2D& other) {
-        // TODO: write this code
+        // Finds the union of the rectangle and the point
+        // New top-left is the min corner of the rectangle and the point
+        // New bottom-right is the max corner of the rectangle and the point
+        float x_min_union = std::min(this->topLeft.x, other.x);
+        float y_min_union = std::min(this->topLeft.y, other.y);
+        float x_max_union = std::max(this->topLeft.x + this->width, other.x);
+        float y_max_union = std::max(this->topLeft.y + this->height, other.y);
+
+        // Rebuild rectangle from the combined corners
+        this->topLeft.x = x_min_union;
+        this->topLeft.y = y_min_union;
+        this->width = x_max_union - x_min_union;
+        this->height = y_max_union - y_min_union;
+
         return *this;
     }
     Rect& operator|=(const Line& other) {
-        // TODO: write this code
+        // Finds the union of the rectangle and the line
+        // New top-left is the min corner of the rectangle and the line
+        // New bottom-right is the max corner of the rectangle and the line
+        float x_min_union = std::min({this->topLeft.x, other.p1.x, other.p2.x});
+        float y_min_union = std::min({this->topLeft.y, other.p1.y, other.p2.y});
+        float x_max_union = std::max({this->topLeft.x + this->width, other.p1.x, other.p2.x});
+        float y_max_union = std::max({this->topLeft.y + this->height, other.p1.y, other.p2.y});
+
+        // Rebuild rectangle from the combined corners
+        this->topLeft.x = x_min_union;
+        this->topLeft.y = y_min_union;
+        this->width = x_max_union - x_min_union;
+        this->height = y_max_union - y_min_union;
+
         return *this;
     }
     Rect& operator&=(const Rect& other) {
-        // TODO: write this code
+        // Finds the intersection of the rectangle and the other rectangle
+        // New top-left is the max corner of the two rectangles
+        // New bottom-right is the min corner of the two rectangles
+        float x_min_intersection = std::max(this->topLeft.x, other.topLeft.x);
+        float y_min_intersection = std::max(this->topLeft.y, other.topLeft.y);
+        float x_max_intersection =
+            std::min(this->topLeft.x + this->width, other.topLeft.x + other.width);
+        float y_max_intersection =
+            std::min(this->topLeft.y + this->height, other.topLeft.y + other.height);
+
+        // Rebuild rectangle from the combined corners
+        this->topLeft.x = x_min_intersection;
+        this->topLeft.y = y_min_intersection;
+        this->width = x_max_intersection - x_min_intersection;
+        this->height = y_max_intersection - y_min_intersection;
+
         return *this;
     }
     Rect& operator+=(const Point2D& other) {
-        // TODO: write this code
+        // Translates the rectangle by adding the other point to the top-left corner
+        // New top-left is the old top-left plus the other point
+        // Width and height remain the same
+        this->topLeft.x += other.x;
+        this->topLeft.y += other.y;
         return *this;
     }
     Rect operator+(const Point2D& other) const {
-        // TODO: write this code
-        return *this;
+        // Returns a new rectangle that is the old rectangle plus the other point
+        // New top-left is the old top-left plus the other point
+        // Width and height remain the same
+        return Rect(this->topLeft + other, this->width, this->height);
     }
     void Inset(int inset) {
-        // TODO: write this code
+        // Insets the rectangle by the given amount
+        // New top-left is the old top-left plus the given amount
+        // New width and height are the old width and height minus twice the given amount
+        this->topLeft.x += inset;
+        this->topLeft.y += inset;
+        this->width -= 2 * inset;
+        this->height -= 2 * inset;
     }
     bool IsInside(const Point2D& p) const {
-        // TODO: write this code
-        return false;
+        // Variables for the rectangle's boundaries
+        float x_min = this->topLeft.x;
+        float y_min = this->topLeft.y;
+        float x_max = this->topLeft.x + this->width;
+        float y_max = this->topLeft.y + this->height;
+
+        // Return true if the point is inside the rectangle
+        return p.x >= x_min && p.x <= x_max && p.y >= y_min && p.y <= y_max;
     }
 };
 
