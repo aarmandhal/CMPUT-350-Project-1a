@@ -46,8 +46,8 @@ void GameEngine::Run() {
 
     GameContext context;
 
-    context.mEngineView = this; // pointer to the current GameEngine object
-    context.ScreenContext = &drawContext; // give me the address of drawContex
+    context.mEngineView = this; // give rhe context access to this engine
+    context.ScreenContext = &drawContext; // give the context access to this drawing helper
 
     while (mWindow->isOpen())  // window is open
     {
@@ -75,10 +75,30 @@ void GameEngine::Run() {
         mNewGameObjects.clear(); // remove everything from the pending vector
 
         // 2. Process events
+
         // Note: use -> because you're accessing a shared_ptr, not the object itself (use '.' in that case)
+        // ask the window for the next event and store the result in event
         while (const std::optional<sf::Event> event = mWindow->pollEvent()) {
+            // checks if the event received is a closed event (closing window)
             if (event->is<sf::Event::Closed>()) {
                 mWindow->close();
+            }
+
+            // checks if current event is a textEntered event
+            else if (const auto* keyPressed = event->getIf<sf::Event::TextEntered>()) {
+                // check if input is lowercase, so < 128
+                if (keyPressed->unicode < 128) {
+                    // convert number to a char (HandleKeyEvent expects that)
+                    char key = static_cast<char>(keyPressed->unicode);
+
+                    std::cout << "Key entered: " << key << std::endl;
+
+
+                    // notify every gameObject of a key press and send it to them
+                    for (const auto& gameObject : mGameObjects) {
+                        gameObject->HandleKeyEvent(&context, key);
+                    }   
+                }
             }
         }
 
