@@ -30,8 +30,11 @@ public:
     void Run();
 
 private:
-    //	std::shared_ptr<sf::RenderWindow> mWindow;
-    //	std::shared_ptr<sf::Font> mFont;
+    	std::shared_ptr<sf::RenderWindow> mWindow;
+    	std::shared_ptr<sf::Font> mFont;
+
+        std::vector<std::shared_ptr<GameObject>> mGameObjects; // objects currently in the game
+        std::vector<std::shared_ptr<GameObject>> mNewGameObjects; // objects waiting to be added to the game
 };
 
 }  // namespace CMPUT350
