@@ -1,6 +1,7 @@
 #ifndef MATHUTIL_H
 #define MATHUTIL_H
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -119,13 +120,15 @@ struct Point2D {
 };
 
 static std::ostream& operator<<(std::ostream& os, const Point2D& p) {
-    // TODO: write this code
+    // Outputs the point in the format (x, y)
+    os << "(" << p.x << ", " << p.y << ")";
     return os;
 }
 
 static Point2D operator*(float number, const Point2D& rhs) {
-    // TODO: write this code
-    return rhs;
+    // Multiplies the point by the scalar
+    // s * (x, y) = (s * x, s * y)
+    return rhs * number;
 }
 
 struct Line {
@@ -134,21 +137,71 @@ struct Line {
     Line(Point2D p1 = {0, 0}, Point2D p2 = {0, 0}) : p1(p1), p2(p2) {}
     Line(float x1, float y1, float x2, float y2) : p1(x1, y1), p2(x2, y2) {}
     float Length() const {
-        // TODO: write this code
-        return 0;
+        // Euclidian distance
+        // d = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+        // (x1, y1) -> this->p1
+        // (x2, y2) -> this->p2
+        return this->p1.Distance(this->p2);
     }
     Point2D ClosestPoint(const Point2D& p) const {
-        // TODO: write this code
-        return p;
+        // Project point p onto the line segment
+        // Let the line segment be defined by points a and b.
+        // We want to find the point c on the line segment that is closest to point p.
+        // Formula: c = a + t * (b - a)
+        // where t = dot(p - a, b - a) / ||b - a||^2
+
+        // If the line segment is a point, return the point
+        if (this->p1 == this->p2) {
+            return this->p1;
+        }
+
+        Point2D ab = this->p2 - this->p1;
+        Point2D ap = p - this->p1;
+        float t = ap.Dot(ab) / ab.Dot(ab);
+        float t_clamped = std::max(0.0f, std::min(1.0f, t));
+
+        // If t is 0, the closest point is p1
+        // If t is 1, the closest point is p2
+        // Otherwise, the closest point is p1 + t * (p2 - p1)
+        if (t_clamped == 0) {
+            return this->p1;
+        } else if (t_clamped == 1) {
+            return this->p2;
+        } else {
+            return this->p1 + (this->p2 - this->p1) * t_clamped;
+        }
     }
     bool Crosses(Line other, Point2D& crossingPoint) const {
-        // TODO: write this code
-        return false;
+        // Parametric form of the line segments
+        // this->p1 + t * (this->p2 - this->p1)
+        // other.p1 + u * (other.p2 - other.p1)
+        Point2D r = this->p2 - this->p1;
+        Point2D s = other.p2 - other.p1;
+        Point2D d = other.p1 - this->p1;
+        float denominator = Point2D::Cross(r, s);
+
+        // If the denominator is 0, the lines are parallel
+        if (denominator == 0) {
+            return false;
+        }
+
+        // Compute t and u
+        float t = Point2D::Cross(d, s) / denominator;
+        float u = Point2D::Cross(d, r) / denominator;
+
+        // If t and u are between 0 and 1, the lines intersect
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+            crossingPoint = this->p1 + r * t;
+            return true;
+        } else {
+            return false;
+        }
     }
 };
 
 static std::ostream& operator<<(std::ostream& os, const Line& l) {
-    // TODO: write this code
+    // Outputs the line in the format p1, p2
+    os << l.p1 << ", " << l.p2;
     return os;
 }
 
@@ -286,7 +339,8 @@ struct Rect {
 };
 
 static std::ostream& operator<<(std::ostream& os, const Rect& l) {
-    // TODO: write this code
+    // Outputs the rectangle in the format (top-left.x, top-left.y), width, height
+    os << "(" << l.topLeft.x << ", " << l.topLeft.y << "), " << l.width << ", " << l.height;
     return os;
 }
 
