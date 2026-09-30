@@ -3,6 +3,9 @@
 
 #include "CollisionObject.h"
 
+// forward decleration of the class Bullet
+class Bullet;
+
 class Player : public CMPUT350::CollisionObject
 {
 public:
@@ -24,6 +27,15 @@ public:
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
+
+private:
+    // store the players current location
+    CMPUT350::Point2D mLocation;
+
+    // weak pointer because Player only wants to 
+    // keep track of whether its bullets still exist
+    std::weak_ptr<Bullet> mBullet1;
+    std::weak_ptr<Bullet> mBullet2;
 
 };
 

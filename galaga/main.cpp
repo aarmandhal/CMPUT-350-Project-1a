@@ -113,7 +113,7 @@ std::mt19937 Ball::gen(rd());
 
 int main()
 {
-    bool mBallSsample = true;
+    bool mBallSsample = false;
 
     if (mBallSsample)
     {
@@ -128,11 +128,25 @@ int main()
         auto player = std::make_shared<Player>(CMPUT350::Point2D(768 / 2, 900));
         engine.AddGameObject(player);
         engine.AddGameObject(std::make_shared<Stars>(250, CMPUT350::Rect(0, 0, 768, 1024)));
-        for (int x = 0; x < 4; x++)
-        {
-            auto enemy = std::make_shared<Enemy>(CMPUT350::Point2D(100 + x * 200, 100));
+
+        const int numEnemies = 40; // number of enemies
+        const float screenWidth = 768;
+        const float spacing = screenWidth / numEnemies; // space between enemies (19.2 pixels)
+
+        for (int i = 0; i < numEnemies; i++) {
+        
+            // have each enemy be in the middle of its own space
+            // so for enemy 0: 19.2px / 2 = 9.6px
+            float enemyX = spacing / 2 + i * spacing;
+
+            // create Enemy object at this specific location 
+            // and return a shared pointer that owns it
+            auto enemy = std::make_shared<Enemy>(CMPUT350::Point2D(enemyX, 100));
+
+            // game engine gets each enemy for updating/rendering/collision
             engine.AddGameObject(enemy);
         }
+
         engine.Run();
     }
     return 0;
