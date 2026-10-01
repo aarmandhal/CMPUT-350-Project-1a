@@ -4,8 +4,7 @@
 #include "CollisionObject.h"
 #include "GameContext.h"
 
-class Bullet : public CMPUT350::CollisionObject
-{
+class Bullet : public CMPUT350::CollisionObject {
 public:
     Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player);
     bool IsPlayerBullet();
@@ -25,5 +24,19 @@ public:
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
+
+private:
+    // Location of the bullet at the previous frame
+    CMPUT350::Point2D mPrevLocation;
+    // Location of the bullet at the current frame
+    CMPUT350::Point2D mCurrentLocation;
+    // Heading of the bullet
+    CMPUT350::Point2D mHeading;
+    // True if the bullet is fired by the player
+    bool mIsPlayer;
+    // True if the bullet is alive
+    bool mAlive;
+    // Bounding box of the bullet
+    CMPUT350::Rect mBounds;
 };
-#endif // BULLET_H
+#endif  // BULLET_H

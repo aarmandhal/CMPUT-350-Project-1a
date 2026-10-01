@@ -4,8 +4,7 @@
 #include "CollisionObject.h"
 #include "GameContext.h"
 
-class Enemy : public CMPUT350::CollisionObject
-{
+class Enemy : public CMPUT350::CollisionObject {
 public:
     Enemy(CMPUT350::Point2D loc);
 
@@ -21,12 +20,17 @@ public:
     void RenderBackground(CMPUT350::GameContext* context) override;
     void RenderForeground(CMPUT350::GameContext* context) override;
 
-
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
+
+private:
+    // True if alive, false if dead
+    bool mAlive;
+    // Bounding box of the enemy
+    CMPUT350::Rect mBounds;
+    // Location of the enemy
+    CMPUT350::Point2D mLocation;
 };
 
-
 #endif
-
