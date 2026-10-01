@@ -125,9 +125,9 @@ void GameEngine::Run() {
 
                 // get the bounding rectangle for each collision object
                 // every object must have GetBounds
-                const Rect& boundsA = objA->GetBounds();
-                const Rect& boundsB = objB->GetBounds();
-
+                Rect boundsA = objA->GetBounds();
+                Rect boundsB = objB->GetBounds();
+                
                 // check whether the two bounding rectangles overlap
                 bool overlap =
                     boundsA.topLeft.x < boundsB.topLeft.x + boundsB.width && // is As left before Bs right
