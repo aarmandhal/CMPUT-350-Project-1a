@@ -129,24 +129,42 @@ int main()
         engine.AddGameObject(player);
         engine.AddGameObject(std::make_shared<Stars>(250, CMPUT350::Rect(0, 0, 768, 1024)));
 
-        const int numEnemies = 40; // number of enemies
-        const float screenWidth = 768;
-        const float spacing = screenWidth / numEnemies; // space between enemies (19.2 pixels)
+        // create 4 rows with 10 enemies in each row
+        const int rows = 4;
+        const int cols = 10;
 
-        for (int i = 0; i < numEnemies; i++) {
-        
-            // have each enemy be in the middle of its own space
-            // so for enemy 0: 19.2px / 2 = 9.6px
-            float enemyX = spacing / 2 + i * spacing;
+        // width of the Galaga window
+        const float screenWidth = 768.0f;
 
-            // create Enemy object at this specific location 
-            // and return a shared pointer that owns it
-            auto enemy = std::make_shared<Enemy>(CMPUT350::Point2D(enemyX, 100));
+        // space each enemy evenly across a row
+        const float horizontalSpacing = screenWidth / cols;
 
-            // game engine gets each enemy for updating/rendering/collision
-            engine.AddGameObject(enemy);
+        // starting height of the first row
+        const float startY = 100.0f;
+
+        // space between each enemy row
+        const float verticalSpacing = 50.0f;
+
+        // create each row
+        for (int row = 0; row < rows; row++) {
+            // create 10 enemies across the current row
+            for (int col = 0; col < cols; col++) {
+            
+                // calculate this enemy's horizontal position
+                float enemyX = horizontalSpacing / 2 + col * horizontalSpacing;
+
+                // calculate this enemy's vertical position
+                float enemyY = startY + row * verticalSpacing;
+
+                // create a new enemy at the calculated position
+                auto enemy = std::make_shared<Enemy>(
+                    CMPUT350::Point2D(enemyX, enemyY)
+                );
+
+                // add the enemy to the game engine
+                engine.AddGameObject(enemy);
+            }
         }
-
         engine.Run();
     }
     return 0;
