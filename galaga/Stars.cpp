@@ -32,3 +32,15 @@ void Stars::RenderBackground(CMPUT350::GameContext* context)
             star.y -= mBounds.height;
     }
 }
+
+// stars stay at the origin
+CMPUT350::Point2D Stars::GetLocation() const
+{
+    return CMPUT350::Point2D(0, 0);
+}
+
+// stars do not rotate
+float Stars::GetRotation() const
+{
+    return 0.0f;
+}

@@ -62,10 +62,12 @@ void NotificationManager::Notify(const std::string& message) {
         registered.erase(
             std::remove_if(registered.begin(), registered.end(),
                 [](const std::weak_ptr<GameObject>& listener) {
-                    return listener.expired();
+                    auto gameObject = listener.lock();
+                    return !gameObject || !gameObject->IsAlive();
                 }),
             registered.end()
         );
+
     }
 }
 

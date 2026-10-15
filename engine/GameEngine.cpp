@@ -109,16 +109,18 @@ void GameEngine::Run() {
         );
 
         // 1. Activate and initialize any objects added during the last frame
-        for (const auto& gameObject : mNewGameObjects) { // for every shared pointer in mNewGameObjects
-            mGameObjects.push_back(gameObject); // add that pointer to the active vector
+        
+        std::vector<std::shared_ptr<GameObject>> newObjects;
+        newObjects.swap(mNewGameObjects);
 
-            //set the current object before initializing it
+        for (const auto& gameObject : newObjects) {
+            mGameObjects.push_back(gameObject);
+
+            // set the current object before initializing it
             context.CurrObject = gameObject;
 
             gameObject->Initialize(&context);
         }
-
-        mNewGameObjects.clear(); // remove everything from the pending vector
 
         // 2. Process events
 

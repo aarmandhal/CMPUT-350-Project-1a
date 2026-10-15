@@ -38,6 +38,10 @@ void Galaga::Initialize(CMPUT350::GameContext* context)
     // allow galaga to receive coin and start notifications
     manager->Register(context->CurrObject, "coin");
     manager->Register(context->CurrObject, "start");
+
+    // create the star background
+    engine->AddGameObject(std::make_shared<Stars>(250, CMPUT350::Rect(0, 0, mWidth, mHeight))
+    );
 }
 
 
@@ -102,7 +106,9 @@ void Galaga::Update(CMPUT350::GameContext* context)
     // handle player lives during gameplay
     else if (mState == State::Gameplay) {
         // check whether the player has been destroyed
-        if (mPlayer.expired()) {
+        auto player = mPlayer.lock();
+
+        if (!player || !player->IsAlive()) {
             // lose one life
             mLives--;
 

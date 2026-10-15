@@ -14,6 +14,7 @@ void Player::Initialize(CMPUT350::GameContext* context)
 {
     // save the context for creating bullets
     mContext = context;
+    mSelf = context->CurrObject;
 
     // get access to the notification manager
     auto manager = context->mNotificationManager;
@@ -64,6 +65,12 @@ void Player::LateUpdate(CMPUT350::GameContext* context)
 
 void Player::ReceiveNotification(const std::string& message)
 {
+
+    // ignore input when the player is dead
+    if (!mAlive) {
+        return;
+    }
+
     // start moving left when a is pressed
     if (message == "left_down") {
         mMovingLeft = true;
@@ -99,7 +106,7 @@ void Player::ReceiveNotification(const std::string& message)
         // create a bullet if the first slot is free
         if (mBullet1.expired()) {
             auto bullet = std::make_shared<Bullet>(
-                mLocation, heading, true);
+                mLocation, heading, true, mSelf);
 
             mBullet1 = bullet;
             mContext->mEngineView->AddGameObject(bullet);
@@ -108,7 +115,7 @@ void Player::ReceiveNotification(const std::string& message)
         // otherwise use the second slot
         else if (mBullet2.expired()) {
             auto bullet = std::make_shared<Bullet>(
-                mLocation, heading, true);
+                mLocation, heading, true, mSelf);
 
             mBullet2 = bullet;
             mContext->mEngineView->AddGameObject(bullet);

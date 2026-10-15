@@ -16,7 +16,8 @@ public:
     void Initialize(CMPUT350::GameContext* context) override;
     void Update(CMPUT350::GameContext* context) override;
     void LateUpdate(CMPUT350::GameContext* context) override;
-    void ReceiveNotification(const std::string& message) override;    bool IsAlive() const override;
+    void ReceiveNotification(const std::string& message) override;    
+    bool IsAlive() const override;
     void Kill() override;
 
     // Graphics Object Functions
@@ -42,6 +43,9 @@ private:
 
     // keep access to the game context for shooting
     CMPUT350::GameContext* mContext = nullptr;
+
+    // keep a weak reference to this player for bullets
+    std::weak_ptr<CMPUT350::GameObject> mSelf;
 
     // track which movement keys are held
     bool mMovingLeft = false;
