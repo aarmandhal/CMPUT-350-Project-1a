@@ -35,9 +35,6 @@ void Enemy::Update(CMPUT350::GameContext* context) {}
 // Empty as nothing depends on the result of this frame's collisions
 void Enemy::LateUpdate(CMPUT350::GameContext* context) {}
 
-// Enemies ignore keyboard input
-bool Enemy::HandleKeyEvent(CMPUT350::GameContext* context, char key) { return false; }
-
 // Empty as enemy only draws in the foreground pass only
 void Enemy::RenderBackground(CMPUT350::GameContext* context) {}
 

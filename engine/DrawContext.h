@@ -41,9 +41,22 @@ public:
     int GetWindowHeight();
 
 private:
+
+    // guves GameEngine permission to call the private methods of DrawContext
+    friend class GameEngine;
+
+    void SetContextOffset(Point2D p);
+    void SetContextRotation(float rotation);
+
+    Point2D Transform(Point2D p);
+    Point2D ReverseTransform(Point2D p);
+    Rect Transform(Rect r);
+
+    Point2D mContextOffset{0, 0};
+    float mContextRotation = 0.0f;
+
     std::shared_ptr<sf::RenderWindow> mWindow;
-    std::shared_ptr<sf::Font> mFont;
-};
+    std::shared_ptr<sf::Font> mFont;};
 
 }  // namespace CMPUT350
 

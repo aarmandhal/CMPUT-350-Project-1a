@@ -64,9 +64,6 @@ void Bullet::LateUpdate(CMPUT350::GameContext* context) {
     }
 }
 
-// Empty as bullets ignore keyboard input
-bool Bullet::HandleKeyEvent(CMPUT350::GameContext* context, char key) { return false; }
-
 // Empty as bullets only draw in the foreground pass
 void Bullet::RenderBackground(CMPUT350::GameContext* context) {}
 

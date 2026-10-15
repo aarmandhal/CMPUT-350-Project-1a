@@ -1,10 +1,14 @@
 #include "GameEngine.h"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include "DrawContext.h"
 #include "GameContext.h"
 #include "CollisionObject.h"
 #include "GraphicsObject.h"
+#include <unordered_map>
+#include <string>
+#include "NotificationManager.h"
 
 /// @brief
 namespace CMPUT350 {
@@ -32,6 +36,37 @@ void GameEngine::AddGameObject(std::shared_ptr<GameObject> gameObject) {
     mNewGameObjects.push_back(gameObject); // add objects (gameObject) to the game (runs twice)
 }
 
+// register a message for when a key is pressed
+void GameEngine::InstallKeyDownNotification(int key, const std::string& notification) {
+    mKeyDownNotifications[key].push_back(notification);
+}
+
+// register a message for when a key is released
+void GameEngine::InstallKeyUpNotification(int key, const std::string& notification) {
+    mKeyUpNotifications[key].push_back(notification);
+}
+
+// return an iterator to the first game object
+GameEngine::const_iterator GameEngine::begin() const {
+    return mGameObjects.begin();
+}
+
+// return an iterator past the last game object
+GameEngine::const_iterator GameEngine::end() const {
+    return mGameObjects.end();
+}
+
+// return a constant iterator to the first game object
+GameEngine::const_iterator GameEngine::cbegin() const {
+    return mGameObjects.cbegin();
+}
+
+// return a constant iterator past the last game object
+GameEngine::const_iterator GameEngine::cend() const {
+    return mGameObjects.cend();
+}
+
+
 /**
  * @method Run
  * @arguments None
@@ -42,12 +77,19 @@ void GameEngine::AddGameObject(std::shared_ptr<GameObject> gameObject) {
 
 void GameEngine::Run() {
 
-    DrawContext drawContext(mWindow, mFont); // gives the game objects drawing access
+    DrawContext screenContext(mWindow, mFont); // gives the game objects drawing access
+    DrawContext guiContext(mWindow, mFont);
 
     GameContext context;
 
     context.mEngineView = this; // give rhe context access to this engine
-    context.ScreenContext = &drawContext; // give the context access to this drawing helper
+    context.ScreenContext = &screenContext; // give the context access to this drawing helper
+    context.GUIContext = &guiContext;
+
+    // give game objects access to the notification manager
+    context.mNotificationManager = &mNotificationManager;
+
+    context.currentFrame = 0;
 
     while (mWindow->isOpen())  // window is open
     {
@@ -68,7 +110,11 @@ void GameEngine::Run() {
 
         // 1. Activate and initialize any objects added during the last frame
         for (const auto& gameObject : mNewGameObjects) { // for every shared pointer in mNewGameObjects
-            mGameObjects.push_back(gameObject); // add that pointer to the active vector:
+            mGameObjects.push_back(gameObject); // add that pointer to the active vector
+
+            //set the current object before initializing it
+            context.CurrObject = gameObject;
+
             gameObject->Initialize(&context);
         }
 
@@ -84,27 +130,37 @@ void GameEngine::Run() {
                 mWindow->close();
             }
 
-            // checks if current event is a textEntered event
-            else if (const auto* keyPressed = event->getIf<sf::Event::TextEntered>()) {
-                // check if input is lowercase, so < 128
-                if (keyPressed->unicode < 128) {
-                    // convert number to a char (HandleKeyEvent expects that)
-                    char key = static_cast<char>(keyPressed->unicode);
+            else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+                // find notifications registered for the pressed key
+                int key = static_cast<int>(keyPressed->scancode);
+                auto it = mKeyDownNotifications.find(key);
 
-                    std::cout << "Key entered: " << key << std::endl;
-
-
-                    // notify every gameObject of a key press and send it to them
-                    for (const auto& gameObject : mGameObjects) {
-                        gameObject->HandleKeyEvent(&context, key);
-                    }   
+                if (it != mKeyDownNotifications.end()) {
+                    // send each registered notification
+                    for (const auto& message : it->second) {
+                        mNotificationManager.Notify(message);
+                    }
                 }
             }
+            else if (const auto* keyReleased = event->getIf<sf::Event::KeyReleased>()) {
+                // find notifications registered for the released key
+                int key = static_cast<int>(keyReleased->scancode);
+                auto it = mKeyUpNotifications.find(key);
+
+                if (it != mKeyUpNotifications.end()) {
+                    // send each registered notification
+                    for (const auto& message : it->second) {
+                        mNotificationManager.Notify(message);
+                    }
+                }
+            }
+
         }
 
         // 3. Update game objects
         // upate every game object in mGameObjects
         for(const auto& gameObject : mGameObjects) {
+            context.CurrObject = gameObject;
             gameObject->Update(&context);
         }
 
@@ -148,6 +204,7 @@ void GameEngine::Run() {
         // 5. Late updates
         // give each active object a chance to update after collision processing. Logic that should happen after collisions
         for(const auto& gameObject : mGameObjects) {
+            context.CurrObject = gameObject;
             gameObject -> LateUpdate(&context);
         }
 
@@ -160,7 +217,15 @@ void GameEngine::Run() {
             auto graphicsObj = std::dynamic_pointer_cast<GraphicsObject>(gameObject);
 
             if (graphicsObj != nullptr) {
-                graphicsObj -> RenderBackground(&context); // lets that object draw anything it considers background contents
+                context.CurrObject = gameObject;
+
+                // set the objects position and rotation
+                screenContext.SetContextOffset(graphicsObj->GetLocation());
+                screenContext.SetContextRotation(graphicsObj->GetRotation());
+
+
+                // draw background
+                graphicsObj -> RenderBackground(&context);
             }
         }
 
@@ -169,12 +234,35 @@ void GameEngine::Run() {
             auto graphicsObj = std::dynamic_pointer_cast<GraphicsObject>(gameObject);
 
             if (graphicsObj != nullptr) {
+                context.CurrObject = gameObject;
+
+                // set the objects position and rotation
+                screenContext.SetContextOffset(graphicsObj->GetLocation());
+                screenContext.SetContextRotation(graphicsObj->GetRotation());
+
+                //draw the foreground
                 graphicsObj -> RenderForeground(&context);
             }
         }
 
+
+        // render GUI
+        for (const auto& gameObject : mGameObjects) {
+            context.CurrObject = gameObject;
+            // GUI is drawn without object transformations
+            guiContext.SetContextOffset({0, 0});
+            guiContext.SetContextRotation(0.0f);
+
+            gameObject->RenderUI(&context);
+        }
+
+        context.CurrObject.reset();
+        
         // Actually render to window
         mWindow->display();
+
+        // increases the frame counter once per completed frame
+        context.currentFrame++;
     }
 }
 

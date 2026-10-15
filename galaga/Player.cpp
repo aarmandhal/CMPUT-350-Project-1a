@@ -1,6 +1,9 @@
 #include <cassert>
 #include "Player.h"
 #include "Bullet.h"
+#include "GameContext.h"
+#include "EngineView.h"
+#include "NotificationManager.h"
 
 Player::Player(CMPUT350::Point2D loc)
 {
@@ -9,74 +12,120 @@ Player::Player(CMPUT350::Point2D loc)
 
 void Player::Initialize(CMPUT350::GameContext* context)
 {
+    // save the context for creating bullets
+    mContext = context;
+
+    // get access to the notification manager
+    auto manager = context->mNotificationManager;
+
+    // register this player to receive the messages
+    manager->Register(context->CurrObject, "left_down");
+    manager->Register(context->CurrObject, "left_up");
+    manager->Register(context->CurrObject, "right_down");
+    manager->Register(context->CurrObject, "right_up");
+    manager->Register(context->CurrObject, "fire_down");
+    manager->Register(context->CurrObject, "fire_up");
+
 }
 
 void Player::Update(CMPUT350::GameContext* context)
 {
+    const float moveAmount = 10;
+    const float halfSize = 20;
+
+    int screenWidth = context->ScreenContext->GetWindowWidth();
+
+    // move left while a is held
+    if (mMovingLeft) {
+        mLocation.x -= moveAmount;
+    }
+
+    // move right while d is held
+    if (mMovingRight) {
+        mLocation.x += moveAmount;
+    }
+
+    // keep the player inside the left side of the screen
+    if (mLocation.x < halfSize) {
+        mLocation.x = halfSize;
+    }
+
+    // keep the player inside the right side of the screen
+    if (mLocation.x > screenWidth - halfSize) {
+        mLocation.x = screenWidth - halfSize;
+    }
+
 }
 
 void Player::LateUpdate(CMPUT350::GameContext* context)
 {
 }
 
-bool Player::HandleKeyEvent(CMPUT350::GameContext* context, char key)
+
+void Player::ReceiveNotification(const std::string& message)
 {
-    const float moveAmount = 20;
-    const float halfSize = 20;
-
-    int screenWidth = context->ScreenContext->GetWindowWidth();
-
-    if (key == 'a' || key == 'A')
-    {
-        mLocation.x -= moveAmount; // move left
-
-        // for player to stay on screen
-        if (mLocation.x < halfSize)
-            mLocation.x = halfSize;
-
-        return true;
+    // start moving left when a is pressed
+    if (message == "left_down") {
+        mMovingLeft = true;
     }
 
-    else if (key == 'd' || key == 'D') {
-        mLocation.x += moveAmount; // move right
-
-        // for player to stay on screen
-        if (mLocation.x > screenWidth - halfSize) {
-            mLocation.x = screenWidth - halfSize;
-        };
-
-        return true;
+    // stop moving left when a is released
+    else if (message == "left_up") {
+        mMovingLeft = false;
     }
 
-    // Note: a weak_ptr is not destroyed when its Bullet is destroyed.
-    // it just becomes expired which means that bullet slot is free to be used again
-    else if (key == ' ') {
-        // bullets movement direction. x movement is 0, y is -10
+    // start moving right when d is pressed
+    else if (message == "right_down") {
+        mMovingRight = true;
+    }
+
+    // stop moving right when d is released
+    else if (message == "right_up") {
+        mMovingRight = false;
+    }
+
+    // allow shooting again when space is released
+    else if (message == "fire_up") {
+        mFiring = false;
+    }
+
+    // shoot once when space is pressed
+    else if (message == "fire_down" && !mFiring) {
+        mFiring = true;
+
+        // bullets move straight upward
         CMPUT350::Point2D heading(0, -10);
 
+        // create a bullet if the first slot is free
         if (mBullet1.expired()) {
-            // create a new bullet object
             auto bullet = std::make_shared<Bullet>(
-                mLocation, // stat the bullet where the player is
-                heading, // move straigh up (y=-10)
-                true);
+                mLocation, heading, true);
 
             mBullet1 = bullet;
-            context->mEngineView->AddGameObject(bullet);
+            mContext->mEngineView->AddGameObject(bullet);
         }
 
+        // otherwise use the second slot
         else if (mBullet2.expired()) {
-            auto bullet = std::make_shared<Bullet>(mLocation, heading, true);
+            auto bullet = std::make_shared<Bullet>(
+                mLocation, heading, true);
 
             mBullet2 = bullet;
-            context->mEngineView->AddGameObject(bullet);
+            mContext->mEngineView->AddGameObject(bullet);
         }
-
-        return true;
     }
+}
 
-    return false;
+// return the players current location
+CMPUT350::Point2D Player::GetLocation() const
+{
+    return mLocation;
+}
 
+// return the players rotation
+float Player::GetRotation() const
+{
+    return 0.0f;
 }
 
 void Player::RenderBackground(CMPUT350::GameContext* context)
@@ -87,16 +136,12 @@ void Player::RenderForeground(CMPUT350::GameContext* context)
 {
     const float halfSize = 20.0f;
 
-    // same x as the center but 20 pixels upward
-    CMPUT350::Point2D top(mLocation.x, mLocation.y - halfSize);
+    // triangle points relative to the players center
+    CMPUT350::Point2D top(0, -halfSize);
+    CMPUT350::Point2D bottomLeft(-halfSize, halfSize);
+    CMPUT350::Point2D bottomRight(halfSize, halfSize);
 
-    // 20 pixels left and 20 pixels down
-    CMPUT350::Point2D bottomLeft(mLocation.x - halfSize, mLocation.y + halfSize);
-
-    // 20 pixels right and 20 pixels down
-    CMPUT350::Point2D bottomRight(mLocation.x + halfSize, mLocation.y + halfSize);
-
-    // connect the three points with lines
+    // draw the player triangle
     context->ScreenContext->DrawLine(top, bottomLeft, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomLeft, bottomRight, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomRight, top, 3, CMPUT350::Colors::green);
@@ -109,11 +154,14 @@ void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& ob
 
 void Player::Kill()
 {
+    // mark the player as dead
+    mAlive = false;
 }
 
 bool Player::IsAlive() const
 {
-    return true;
+    // return whether player is alive or not
+    return mAlive;
 }
 
 const CMPUT350::Rect& Player::GetBounds()

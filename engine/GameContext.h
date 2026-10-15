@@ -7,10 +7,16 @@
 
 namespace CMPUT350 {
 
+class NotificationManager;
+
 class GameContext {
 public:
     EngineView *mEngineView;
     DrawContext *ScreenContext;
+    DrawContext *GUIContext;
+    std::weak_ptr<GameObject> CurrObject;
+    NotificationManager *mNotificationManager;
+    int currentFrame;
 };
 
 }  // namespace CMPUT350

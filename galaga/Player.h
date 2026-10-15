@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include "CollisionObject.h"
+#include <string>
 
 // forward decleration of the class Bullet
 class Bullet;
@@ -15,14 +16,16 @@ public:
     void Initialize(CMPUT350::GameContext* context) override;
     void Update(CMPUT350::GameContext* context) override;
     void LateUpdate(CMPUT350::GameContext* context) override;
-    bool HandleKeyEvent(CMPUT350::GameContext* context, char key) override;
-    bool IsAlive() const override;
+    void ReceiveNotification(const std::string& message) override;    bool IsAlive() const override;
     void Kill() override;
 
     // Graphics Object Functions
     void RenderBackground(CMPUT350::GameContext* context) override;
     void RenderForeground(CMPUT350::GameContext* context) override;
 
+    // return the players position and rotation
+    CMPUT350::Point2D GetLocation() const override;
+    float GetRotation() const override;
 
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
@@ -36,6 +39,17 @@ private:
     // keep track of whether its bullets still exist
     std::weak_ptr<Bullet> mBullet1;
     std::weak_ptr<Bullet> mBullet2;
+
+    // keep access to the game context for shooting
+    CMPUT350::GameContext* mContext = nullptr;
+
+    // track which movement keys are held
+    bool mMovingLeft = false;
+    bool mMovingRight = false;
+    bool mFiring = false;
+
+    // track whether the player is alive
+    bool mAlive = true;
 
 };
 
