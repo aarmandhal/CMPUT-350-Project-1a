@@ -80,13 +80,13 @@ bool LineVsCircle(Line l, Circle c, Point2D& out) {
 }
 
 bool ShapesIntersect(ShapeUnion a, ShapeUnion b, Point2D& out) {
-    if (a.type == ShapeType::CIRCLE && b.type == ShapeType::CIRCLE) {
+    if (a.type == ShapeType::Circle && b.type == ShapeType::Circle) {
         return CircleVsCircle(a.circle, b.circle, out);
-    } else if (a.type == ShapeType::LINE && b.type == ShapeType::LINE) {
+    } else if (a.type == ShapeType::Line && b.type == ShapeType::Line) {
         return LineVsLine(a.line, b.line, out);
-    } else if (a.type == ShapeType::LINE && b.type == ShapeType::CIRCLE) {
+    } else if (a.type == ShapeType::Line && b.type == ShapeType::Circle) {
         return LineVsCircle(a.line, b.circle, out);
-    } else if (a.type == ShapeType::CIRCLE && b.type == ShapeType::LINE) {
+    } else if (a.type == ShapeType::Circle && b.type == ShapeType::Line) {
         return LineVsCircle(b.line, a.circle, out);
     }
     return false;
