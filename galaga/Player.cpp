@@ -101,7 +101,7 @@ void Player::ReceiveNotification(const std::string& message) {
         mFiring = true;
 
         // bullets move straight upward
-        CMPUT350::Point2D heading(0, -10);
+        CMPUT350::Vector2D heading(0, -10);
 
         // create a bullet if the first slot is free
         if (mBullet1.expired()) {

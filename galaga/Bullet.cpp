@@ -11,9 +11,7 @@ const bool DEBUG_BOXES = false;
 // Width of debug line
 const int DEBUG_LINE = 1;
 
-Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player,
-               std::weak_ptr<CMPUT350::GameObject> firer) {
-    // Set previous location to current location
+Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Vector2D heading, bool player, std::weak_ptr<CMPUT350::GameObject> firer) { // set previous location to current location
     this->mPrevLocation = location;
     // Set current location
     this->mCurrentLocation = location;

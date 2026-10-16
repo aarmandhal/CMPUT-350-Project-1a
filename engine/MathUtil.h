@@ -120,6 +120,9 @@ struct Point2D {
     }
 };
 
+// both names refer to the exact same type
+using Vector2D = Point2D;
+
 static std::ostream& operator<<(std::ostream& os, const Point2D& p) {
     // Outputs the point in the format (x, y)
     os << "(" << p.x << ", " << p.y << ")";
@@ -156,8 +159,8 @@ struct Line {
             return this->p1;
         }
 
-        Point2D ab = this->p2 - this->p1;
-        Point2D ap = p - this->p1;
+        Vector2D ab = this->p2 - this->p1;
+        Vector2D ap = p - this->p1;
         float t = ap.Dot(ab) / ab.Dot(ab);
         float t_clamped = std::max(0.0f, std::min(1.0f, t));
 
@@ -176,9 +179,9 @@ struct Line {
         // Parametric form of the line segments
         // this->p1 + t * (this->p2 - this->p1)
         // other.p1 + u * (other.p2 - other.p1)
-        Point2D r = this->p2 - this->p1;
-        Point2D s = other.p2 - other.p1;
-        Point2D d = other.p1 - this->p1;
+        Vector2D r = this->p2 - this->p1;
+        Vector2D s = other.p2 - other.p1;
+        Vector2D d = other.p1 - this->p1;
         float denominator = Point2D::Cross(r, s);
 
         // If the denominator is 0, the lines are parallel
