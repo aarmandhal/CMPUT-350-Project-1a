@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 namespace CMPUT350 {
 
@@ -343,6 +344,40 @@ static std::ostream& operator<<(std::ostream& os, const Rect& l) {
     os << "(" << l.topLeft.x << ", " << l.topLeft.y << "), " << l.width << ", " << l.height;
     return os;
 }
+
+struct Bezier {
+    std::vector<Point2D> controlPoints;
+
+    Point2D GetPoint(float t) { return GetPoint(this->controlPoints, t); };
+
+    Point2D GetSlope(float t) { return GetSlope(this->controlPoints, t); };
+
+    static Point2D GetPoint(const std::vector<Point2D>& points, float t) {
+        int num_segments = (points.size() - 1) / 3;
+        int segmentIndex = (int)floor(t);
+        segmentIndex = std::min(std::max(segmentIndex, 0), num_segments - 1);
+        float localT = t - segmentIndex;
+        Point2D p1 = points[segmentIndex * 3];
+        Point2D p2 = points[segmentIndex * 3 + 1];
+        Point2D p3 = points[segmentIndex * 3 + 2];
+        Point2D p4 = points[segmentIndex * 3 + 3];
+        return (((1 - localT) * (1 - localT) * (1 - localT)) * p1) +
+               (3 * ((1 - localT) * (1 - localT)) * localT * p2) +
+               (3 * (1 - localT) * (localT * localT) * p3) + ((localT * localT * localT) * p4);
+    };
+    static Point2D GetSlope(const std::vector<Point2D>& points, float t) {
+        int num_segments = (points.size() - 1) / 3;
+        int segmentIndex = (int)floor(t);
+        segmentIndex = std::min(std::max(segmentIndex, 0), num_segments - 1);
+        float localT = t - segmentIndex;
+        Point2D p1 = points[segmentIndex * 3];
+        Point2D p2 = points[segmentIndex * 3 + 1];
+        Point2D p3 = points[segmentIndex * 3 + 2];
+        Point2D p4 = points[segmentIndex * 3 + 3];
+        return (3 * ((1 - localT) * (1 - localT)) * (p2 - p1)) +
+               (6 * (1 - localT) * localT * (p3 - p2)) + (3 * (localT * localT) * (p4 - p3));
+    };
+};
 
 }  // namespace CMPUT350
 

@@ -81,3 +81,12 @@ bool Enemy::IsAlive() const { return this->mAlive; }
 
 // Get bounding box of enemy
 const CMPUT350::Rect& Enemy::GetBounds() { return this->mBounds; }
+
+std::vector<CMPUT350::ShapeUnion> Enemy::GetShapes() {
+    CMPUT350::ShapeUnion shape;
+    shape.type = CMPUT350::ShapeType::Circle;
+    shape.circle =
+        CMPUT350::Circle(mBounds.topLeft + CMPUT350::Point2D(mBounds.width / 2, mBounds.height / 2),
+                         std::max(mBounds.width, mBounds.height) / 2);
+    return {shape};
+}

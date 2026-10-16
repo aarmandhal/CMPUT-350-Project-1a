@@ -1,44 +1,34 @@
-#include <cassert>
 #include "Player.h"
+
+#include <cassert>
+
 #include "Bullet.h"
 
-Player::Player(CMPUT350::Point2D loc)
-{
-    mLocation = loc;
-}
+Player::Player(CMPUT350::Point2D loc) { mLocation = loc; }
 
-void Player::Initialize(CMPUT350::GameContext* context)
-{
-}
+void Player::Initialize(CMPUT350::GameContext* context) {}
 
-void Player::Update(CMPUT350::GameContext* context)
-{
-}
+void Player::Update(CMPUT350::GameContext* context) {}
 
-void Player::LateUpdate(CMPUT350::GameContext* context)
-{
-}
+void Player::LateUpdate(CMPUT350::GameContext* context) {}
 
-bool Player::HandleKeyEvent(CMPUT350::GameContext* context, char key)
-{
+bool Player::HandleKeyEvent(CMPUT350::GameContext* context, char key) {
     const float moveAmount = 20;
     const float halfSize = 20;
 
     int screenWidth = context->ScreenContext->GetWindowWidth();
 
-    if (key == 'a' || key == 'A')
-    {
-        mLocation.x -= moveAmount; // move left
+    if (key == 'a' || key == 'A') {
+        mLocation.x -= moveAmount;  // move left
 
         // for player to stay on screen
-        if (mLocation.x < halfSize)
-            mLocation.x = halfSize;
+        if (mLocation.x < halfSize) mLocation.x = halfSize;
 
         return true;
     }
 
     else if (key == 'd' || key == 'D') {
-        mLocation.x += moveAmount; // move right
+        mLocation.x += moveAmount;  // move right
 
         // for player to stay on screen
         if (mLocation.x > screenWidth - halfSize) {
@@ -56,10 +46,10 @@ bool Player::HandleKeyEvent(CMPUT350::GameContext* context, char key)
 
         if (mBullet1.expired()) {
             // create a new bullet object
-            auto bullet = std::make_shared<Bullet>(
-                mLocation, // stat the bullet where the player is
-                heading, // move straigh up (y=-10)
-                true);
+            auto bullet =
+                std::make_shared<Bullet>(mLocation,  // stat the bullet where the player is
+                                         heading,    // move straigh up (y=-10)
+                                         true);
 
             mBullet1 = bullet;
             context->mEngineView->AddGameObject(bullet);
@@ -76,15 +66,11 @@ bool Player::HandleKeyEvent(CMPUT350::GameContext* context, char key)
     }
 
     return false;
-
 }
 
-void Player::RenderBackground(CMPUT350::GameContext* context)
-{
-}
+void Player::RenderBackground(CMPUT350::GameContext* context) {}
 
-void Player::RenderForeground(CMPUT350::GameContext* context)
-{
+void Player::RenderForeground(CMPUT350::GameContext* context) {
     const float halfSize = 20.0f;
 
     // same x as the center but 20 pixels upward
@@ -100,24 +86,15 @@ void Player::RenderForeground(CMPUT350::GameContext* context)
     context->ScreenContext->DrawLine(top, bottomLeft, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomLeft, bottomRight, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomRight, top, 3, CMPUT350::Colors::green);
-
 }
 
-void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj)
-{
-}
+void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) {}
 
-void Player::Kill()
-{
-}
+void Player::Kill() {}
 
-bool Player::IsAlive() const
-{
-    return true;
-}
+bool Player::IsAlive() const { return true; }
 
-const CMPUT350::Rect& Player::GetBounds()
-{
+const CMPUT350::Rect& Player::GetBounds() {
     const float halfSize = 20.0f;
 
     // static so the returned reference stays valid
