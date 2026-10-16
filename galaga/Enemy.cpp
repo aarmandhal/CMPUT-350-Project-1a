@@ -22,7 +22,7 @@ Enemy::Enemy(CMPUT350::Point2D loc) {
     // Set alive to true
     this->mAlive = true;
     // Set bounding box
-    CMPUT350::Point2D halfSize(ENEMY_WIDTH / 2, ENEMY_HEIGHT / 2);
+    CMPUT350::Vector2D halfSize(ENEMY_WIDTH / 2, ENEMY_HEIGHT / 2);
     this->mBounds = CMPUT350::Rect(loc - halfSize, loc + halfSize);
 }
 

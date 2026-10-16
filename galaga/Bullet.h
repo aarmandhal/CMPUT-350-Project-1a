@@ -6,7 +6,7 @@
 
 class Bullet : public CMPUT350::CollisionObject {
 public:
-    Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player);
+    Bullet(CMPUT350::Point2D location, CMPUT350::Vector2D heading, bool player);
     bool IsPlayerBullet();
 
     // GameObject Functions
@@ -30,7 +30,7 @@ private:
     // Location of the bullet at the current frame
     CMPUT350::Point2D mCurrentLocation;
     // Heading of the bullet
-    CMPUT350::Point2D mHeading;
+    CMPUT350::Vector2D mHeading;
     // True if the bullet is fired by the player
     bool mIsPlayer;
     // True if the bullet is alive
