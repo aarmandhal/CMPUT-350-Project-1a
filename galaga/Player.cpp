@@ -1,17 +1,16 @@
-#include <cassert>
 #include "Player.h"
+
+#include <cassert>
+
 #include "Bullet.h"
-#include "GameContext.h"
 #include "EngineView.h"
+#include "GameContext.h"
 #include "NotificationManager.h"
 
-Player::Player(CMPUT350::Point2D loc)
-{
-    mLocation = loc;
-}
 
-void Player::Initialize(CMPUT350::GameContext* context)
-{
+Player::Player(CMPUT350::Point2D loc) { mLocation = loc; }
+
+void Player::Initialize(CMPUT350::GameContext* context) {
     // save the context for creating bullets
     mContext = context;
     mSelf = context->CurrObject;
@@ -26,11 +25,9 @@ void Player::Initialize(CMPUT350::GameContext* context)
     manager->Register(context->CurrObject, "right_up");
     manager->Register(context->CurrObject, "fire_down");
     manager->Register(context->CurrObject, "fire_up");
-
 }
 
-void Player::Update(CMPUT350::GameContext* context)
-{
+void Player::Update(CMPUT350::GameContext* context) {
     const float moveAmount = 10;
     const float halfSize = 20;
 
@@ -55,17 +52,11 @@ void Player::Update(CMPUT350::GameContext* context)
     if (mLocation.x > screenWidth - halfSize) {
         mLocation.x = screenWidth - halfSize;
     }
-
 }
 
-void Player::LateUpdate(CMPUT350::GameContext* context)
-{
-}
+void Player::LateUpdate(CMPUT350::GameContext* context) {}
 
-
-void Player::ReceiveNotification(const std::string& message)
-{
-
+void Player::ReceiveNotification(const std::string& message) {
     // ignore input when the player is dead
     if (!mAlive) {
         return;
@@ -105,8 +96,15 @@ void Player::ReceiveNotification(const std::string& message)
 
         // create a bullet if the first slot is free
         if (mBullet1.expired()) {
-            auto bullet = std::make_shared<Bullet>(
-                mLocation, heading, true, mSelf);
+<<<<<<< HEAD
+            auto bullet = std::make_shared<Bullet>(mLocation, heading, true, mSelf);
+            == == == =
+                         // create a new bullet object
+                auto bullet =
+                    std::make_shared<Bullet>(mLocation,  // stat the bullet where the player is
+                                             heading,    // move straigh up (y=-10)
+                                             true);
+>>>>>>> origin/feature/precise-collision-shapes
 
             mBullet1 = bullet;
             mContext->mEngineView->AddGameObject(bullet);
@@ -114,8 +112,7 @@ void Player::ReceiveNotification(const std::string& message)
 
         // otherwise use the second slot
         else if (mBullet2.expired()) {
-            auto bullet = std::make_shared<Bullet>(
-                mLocation, heading, true, mSelf);
+            auto bullet = std::make_shared<Bullet>(mLocation, heading, true, mSelf);
 
             mBullet2 = bullet;
             mContext->mEngineView->AddGameObject(bullet);
@@ -124,23 +121,14 @@ void Player::ReceiveNotification(const std::string& message)
 }
 
 // return the players current location
-CMPUT350::Point2D Player::GetLocation() const
-{
-    return mLocation;
-}
+CMPUT350::Point2D Player::GetLocation() const { return mLocation; }
 
 // return the players rotation
-float Player::GetRotation() const
-{
-    return 0.0f;
-}
+float Player::GetRotation() const { return 0.0f; }
 
-void Player::RenderBackground(CMPUT350::GameContext* context)
-{
-}
+void Player::RenderBackground(CMPUT350::GameContext* context) {}
 
-void Player::RenderForeground(CMPUT350::GameContext* context)
-{
+void Player::RenderForeground(CMPUT350::GameContext* context) {
     const float halfSize = 20.0f;
 
     // triangle points relative to the players center
@@ -152,27 +140,21 @@ void Player::RenderForeground(CMPUT350::GameContext* context)
     context->ScreenContext->DrawLine(top, bottomLeft, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomLeft, bottomRight, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomRight, top, 3, CMPUT350::Colors::green);
-
 }
 
-void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj)
-{
-}
+void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) {}
 
-void Player::Kill()
-{
+void Player::Kill() {
     // mark the player as dead
     mAlive = false;
 }
 
-bool Player::IsAlive() const
-{
+bool Player::IsAlive() const {
     // return whether player is alive or not
     return mAlive;
 }
 
-const CMPUT350::Rect& Player::GetBounds()
-{
+const CMPUT350::Rect& Player::GetBounds() {
     const float halfSize = 20.0f;
 
     // static so the returned reference stays valid
@@ -184,4 +166,15 @@ const CMPUT350::Rect& Player::GetBounds()
         CMPUT350::Point2D(mLocation.x - halfSize, mLocation.y - halfSize), 40, 40);
 
     return playerBound;
+}
+
+// Get the collision shape of the player
+std::vector<CMPUT350::ShapeUnion> Player::GetShapes() {
+    const CMPUT350::Rect& bounds = GetBounds();
+    CMPUT350::ShapeUnion shape;
+    shape.type = CMPUT350::ShapeType::Circle;
+    shape.circle =
+        CMPUT350::Circle(bounds.topLeft + CMPUT350::Point2D(bounds.width / 2, bounds.height / 2),
+                         std::max(bounds.width, bounds.height) / 2);
+    return {shape};
 }

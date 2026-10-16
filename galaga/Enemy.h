@@ -22,6 +22,7 @@ public:
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
+    const std::vector<CMPUT350::ShapeUnion>& GetShapes() override;
 
 private:
     // True if alive, false if dead
@@ -30,6 +31,8 @@ private:
     CMPUT350::Rect mBounds;
     // Location of the enemy
     CMPUT350::Point2D mLocation;
+    // Local-space collision shapes, built once in the constructor
+    std::vector<CMPUT350::Shape> mShapes;
 };
 
 #endif
