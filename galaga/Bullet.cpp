@@ -121,3 +121,13 @@ bool Bullet::IsAlive() const {
 
 // Get bounding box of bullet
 const CMPUT350::Rect& Bullet::GetBounds() { return this->mBounds; }
+
+// Get the collision shape of the bullet
+std::vector<CMPUT350::ShapeUnion> Bullet::GetShapes() {
+    CMPUT350::ShapeUnion shape;
+    shape.type = CMPUT350::ShapeType::Circle;
+    shape.circle =
+        CMPUT350::Circle(mBounds.topLeft + CMPUT350::Point2D(mBounds.width / 2, mBounds.height / 2),
+                         std::max(mBounds.width, mBounds.height) / 2);
+    return {shape};
+}

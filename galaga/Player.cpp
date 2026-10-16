@@ -107,3 +107,14 @@ const CMPUT350::Rect& Player::GetBounds() {
 
     return playerBound;
 }
+
+// Get the collision shape of the player
+std::vector<CMPUT350::ShapeUnion> Player::GetShapes() {
+    const CMPUT350::Rect& bounds = GetBounds();
+    CMPUT350::ShapeUnion shape;
+    shape.type = CMPUT350::ShapeType::Circle;
+    shape.circle =
+        CMPUT350::Circle(bounds.topLeft + CMPUT350::Point2D(bounds.width / 2, bounds.height / 2),
+                         std::max(bounds.width, bounds.height) / 2);
+    return {shape};
+}

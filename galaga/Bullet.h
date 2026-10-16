@@ -1,6 +1,8 @@
 #ifndef BULLET_H
 #define BULLET_H
 
+#include <vector>
+
 #include "CollisionObject.h"
 #include "GameContext.h"
 
@@ -24,6 +26,7 @@ public:
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
+    std::vector<CMPUT350::ShapeUnion> GetShapes() override;
 
 private:
     // Location of the bullet at the previous frame
