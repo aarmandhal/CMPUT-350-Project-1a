@@ -26,6 +26,8 @@ Enemy::Enemy(CMPUT350::Point2D loc) {
     // Local-space shape, centered on local origin — the engine offsets by mLocation later
     CMPUT350::Rect localRect = CMPUT350::Rect(
         CMPUT350::Point2D(-ENEMY_WIDTH / 2.0f, -ENEMY_HEIGHT / 2.0f), ENEMY_WIDTH, ENEMY_HEIGHT);
+    this->mLocalBounds = localRect;
+
     CMPUT350::ShapeUnion shapeUnion;
     shapeUnion.type = CMPUT350::ShapeType::Rect;
     shapeUnion.rect = localRect;
@@ -33,6 +35,13 @@ Enemy::Enemy(CMPUT350::Point2D loc) {
 }
 
 const std::vector<CMPUT350::ShapeUnion>& Enemy::GetShapes() { return this->mShapes; }
+
+// Enemy's own position — the engine uses this to offset the draw context,
+// so RenderForeground below draws relative to this, not in absolute coordinates
+CMPUT350::Point2D Enemy::GetLocation() const { return this->mLocation; }
+
+// Enemies don't rotate
+float Enemy::GetRotation() const { return 0.0f; }
 
 // Empty as constructor already did all the setup the object needs
 void Enemy::Initialize(CMPUT350::GameContext* context) {}
@@ -52,11 +61,12 @@ void Enemy::RenderForeground(CMPUT350::GameContext* context) {
     if (!this->mAlive) {
         return;
     }
-    // Draw enemy as a green square
-    context->ScreenContext->DrawRect(mBounds, CMPUT350::Colors::green);
+    // Draw enemy as a green square, in local space — the engine has already offset
+    // the draw context by GetLocation(), so mBounds (world space) would double-offset it
+    context->ScreenContext->DrawRect(mLocalBounds, CMPUT350::Colors::green);
     // Draw debug box if enabled
     if (DEBUG_BOXES) {
-        context->ScreenContext->FrameRect(mBounds, DEBUG_LINE, CMPUT350::Colors::yellow);
+        context->ScreenContext->FrameRect(mLocalBounds, DEBUG_LINE, CMPUT350::Colors::yellow);
     }
 }
 

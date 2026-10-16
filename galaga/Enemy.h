@@ -19,6 +19,10 @@ public:
     void RenderBackground(CMPUT350::GameContext* context) override;
     void RenderForeground(CMPUT350::GameContext* context) override;
 
+    // return the enemy's position and rotation
+    CMPUT350::Point2D GetLocation() const override;
+    float GetRotation() const override;
+
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
@@ -27,12 +31,15 @@ public:
 private:
     // True if alive, false if dead
     bool mAlive;
-    // Bounding box of the enemy
+    // Bounding box of the enemy (world space, used for the broad-phase collision check)
     CMPUT350::Rect mBounds;
+    // Local-space bounding rect, centered on the origin — used for drawing relative to
+    // GetLocation(), which the engine now uses to offset the draw context
+    CMPUT350::Rect mLocalBounds;
     // Location of the enemy
     CMPUT350::Point2D mLocation;
     // Local-space collision shapes, built once in the constructor
-    std::vector<CMPUT350::Shape> mShapes;
+    std::vector<CMPUT350::ShapeUnion> mShapes;
 };
 
 #endif

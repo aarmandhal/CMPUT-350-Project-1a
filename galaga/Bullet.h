@@ -1,14 +1,20 @@
 #ifndef BULLET_H
 #define BULLET_H
 
+#include <memory>
 #include <vector>
 
 #include "CollisionObject.h"
 #include "GameContext.h"
+#include "GameObject.h"
 
 class Bullet : public CMPUT350::CollisionObject {
 public:
-    Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player);
+    // firer is who shot this bullet, so it can be ignored in CollisionEnter and a
+    // bullet never kills its own shooter. Defaults to an empty weak_ptr for callers
+    // (or tests) that don't track a firer.
+    Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player,
+           std::weak_ptr<CMPUT350::GameObject> firer = std::weak_ptr<CMPUT350::GameObject>());
     bool IsPlayerBullet();
 
     // GameObject Functions
@@ -27,7 +33,7 @@ public:
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
-    const std::vector<CMPUT350::ShapeUnion> GetShapes() override;
+    const std::vector<CMPUT350::ShapeUnion>& GetShapes() override;
 
 private:
     // Rebuilds mShapes (a local-space Line) from the current prev/current positions.
@@ -48,5 +54,7 @@ private:
     CMPUT350::Rect mBounds;
     // Local-space collision shapes, rebuilt every Update since the bullet moves
     std::vector<CMPUT350::ShapeUnion> mShapes;
+    // Who fired this bullet, so it can be excluded from collisions against its own shooter
+    std::weak_ptr<CMPUT350::GameObject> mFirer;
 };
 #endif  // BULLET_H

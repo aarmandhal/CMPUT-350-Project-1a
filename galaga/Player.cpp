@@ -7,8 +7,17 @@
 #include "GameContext.h"
 #include "NotificationManager.h"
 
+Player::Player(CMPUT350::Point2D loc) {
+    mLocation = loc;
 
-Player::Player(CMPUT350::Point2D loc) { mLocation = loc; }
+    // Local-space collision shape: a circle centered on the origin, matching the
+    // 40x40 box GetBounds() uses (radius = half of that, i.e. 20)
+    const float radius = 20.0f;
+    CMPUT350::ShapeUnion shape;
+    shape.type = CMPUT350::ShapeType::Circle;
+    shape.circle = CMPUT350::Circle(CMPUT350::Point2D(0, 0), radius);
+    mShapes.push_back(shape);
+}
 
 void Player::Initialize(CMPUT350::GameContext* context) {
     // save the context for creating bullets
@@ -96,15 +105,8 @@ void Player::ReceiveNotification(const std::string& message) {
 
         // create a bullet if the first slot is free
         if (mBullet1.expired()) {
-<<<<<<< HEAD
+            // pass mSelf as the firer so the bullet ignores collisions with the player
             auto bullet = std::make_shared<Bullet>(mLocation, heading, true, mSelf);
-            == == == =
-                         // create a new bullet object
-                auto bullet =
-                    std::make_shared<Bullet>(mLocation,  // stat the bullet where the player is
-                                             heading,    // move straigh up (y=-10)
-                                             true);
->>>>>>> origin/feature/precise-collision-shapes
 
             mBullet1 = bullet;
             mContext->mEngineView->AddGameObject(bullet);
@@ -168,13 +170,6 @@ const CMPUT350::Rect& Player::GetBounds() {
     return playerBound;
 }
 
-// Get the collision shape of the player
-std::vector<CMPUT350::ShapeUnion> Player::GetShapes() {
-    const CMPUT350::Rect& bounds = GetBounds();
-    CMPUT350::ShapeUnion shape;
-    shape.type = CMPUT350::ShapeType::Circle;
-    shape.circle =
-        CMPUT350::Circle(bounds.topLeft + CMPUT350::Point2D(bounds.width / 2, bounds.height / 2),
-                         std::max(bounds.width, bounds.height) / 2);
-    return {shape};
-}
+// Get the collision shape of the player (local space — built once in the constructor,
+// since the engine adds GetLocation() on top when transforming shapes to world space)
+const std::vector<CMPUT350::ShapeUnion>& Player::GetShapes() { return mShapes; }

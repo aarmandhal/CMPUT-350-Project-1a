@@ -14,7 +14,6 @@
 #include "MathUtil.h"
 #include "NotificationManager.h"
 
-
 using namespace CMPUT350;
 
 const float EPSILON = 0.0001f;
@@ -28,14 +27,20 @@ std::vector<ShapeUnion> transformShapes(const std::vector<ShapeUnion>& localShap
                                         Point2D location, float rotation) {
     std::vector<ShapeUnion> worldShapes;
     for (const auto& shape : localShapes) {
-        if (shape.type == ShapeType::CIRCLE) {
+        if (shape.type == ShapeType::Circle) {
             Point2D newCenter = rotatePoint(shape.circle.center, rotation) + location;
-            worldShapes.push_back(Circle(newCenter, shape.circle.radius));
-        } else if (shape.type == ShapeType::LINE) {
+            ShapeUnion out;
+            out.type = ShapeType::Circle;
+            out.circle = Circle(newCenter, shape.circle.radius);
+            worldShapes.push_back(out);
+        } else if (shape.type == ShapeType::Line) {
             Point2D newP1 = rotatePoint(shape.line.p1, rotation) + location;
             Point2D newP2 = rotatePoint(shape.line.p2, rotation) + location;
-            worldShapes.push_back(Line(newP1, newP2));
-        } else if (shape.type == ShapeType::RECT) {
+            ShapeUnion out;
+            out.type = ShapeType::Line;
+            out.line = Line(newP1, newP2);
+            worldShapes.push_back(out);
+        } else if (shape.type == ShapeType::Rect) {
             Point2D corners[4] = {
                 shape.rect.topLeft,
                 shape.rect.topLeft + Point2D(shape.rect.width, 0),
@@ -46,7 +51,10 @@ std::vector<ShapeUnion> transformShapes(const std::vector<ShapeUnion>& localShap
                 corners[i] = rotatePoint(corners[i], rotation) + location;
             }
             for (int i = 0; i < 4; i++) {
-                worldShapes.push_back(Line(corners[i], corners[(i + 1) % 4]));
+                ShapeUnion out;
+                out.type = ShapeType::Line;
+                out.line = Line(corners[i], corners[(i + 1) % 4]);
+                worldShapes.push_back(out);
             }
         }
     }
@@ -157,7 +165,7 @@ void GameEngine::Run() {
 
     GameContext context;
 
-    context.mEngineView = this;              // give rhe context access to this engine
+    context.mEngineView = this;              // give the context access to this engine
     context.ScreenContext = &screenContext;  // give the context access to this drawing helper
     context.GUIContext = &guiContext;
 
@@ -165,12 +173,6 @@ void GameEngine::Run() {
     context.mNotificationManager = &mNotificationManager;
 
     context.currentFrame = 0;
-    DrawContext drawContext(mWindow, mFont);  // gives the game objects drawing access
-
-    GameContext context;
-
-    context.mEngineView = this;            // give rhe context access to this engine
-    context.ScreenContext = &drawContext;  // give the context access to this drawing helper
 
     while (mWindow->isOpen())  // window is open
     {
@@ -186,7 +188,6 @@ void GameEngine::Run() {
             mGameObjects.end());
 
         // 1. Activate and initialize any objects added during the last frame
-
         std::vector<std::shared_ptr<GameObject>> newObjects;
         newObjects.swap(mNewGameObjects);
 
@@ -218,163 +219,141 @@ void GameEngine::Run() {
                     // send each registered notification
                     for (const auto& message : it->second) {
                         mNotificationManager.Notify(message);
-                        std::cout << "Key entered: " << key << std::endl;
-
-                        // notify every gameObject of a key press and send it to them
-                        for (const auto& gameObject : mGameObjects) {
-                            gameObject->HandleKeyEvent(&context, key);
-                        }
-                    }
-                } else if (const auto* keyReleased = event->getIf<sf::Event::KeyReleased>()) {
-                    // find notifications registered for the released key
-                    int key = static_cast<int>(keyReleased->scancode);
-                    auto it = mKeyUpNotifications.find(key);
-
-                    if (it != mKeyUpNotifications.end()) {
-                        // send each registered notification
-                        for (const auto& message : it->second) {
-                            mNotificationManager.Notify(message);
-                        }
                     }
                 }
             }
 
-            // 3. Update game objects
-            // upate every game object in mGameObjects
-            for (const auto& gameObject : mGameObjects) {
-                context.CurrObject = gameObject;
-                gameObject->Update(&context);
-            }
+            else if (const auto* keyReleased = event->getIf<sf::Event::KeyReleased>()) {
+                // find notifications registered for the released key
+                int key = static_cast<int>(keyReleased->scancode);
+                auto it = mKeyUpNotifications.find(key);
 
-            // 4. Process collision events
-            // loop through every game object
-            for (size_t a = 0; a < mGameObjects.size(); a++) {
-                for (size_t b = a + 1; b < mGameObjects.size(); b++) {
-                    auto objA = std::dynamic_pointer_cast<CollisionObject>(mGameObjects[a]);
-                    auto objB = std::dynamic_pointer_cast<CollisionObject>(mGameObjects[b]);
-
-                    if (objA == nullptr || objB == nullptr) {
-                        continue;
-                    }
-
-                    Rect boundsA = objA->GetBounds();
-                    Rect boundsB = objB->GetBounds();
-
-                    bool overlap = boundsA.topLeft.x < boundsB.topLeft.x + boundsB.width &&
-                                   boundsA.topLeft.x + boundsA.width > boundsB.topLeft.x &&
-                                   boundsA.topLeft.y < boundsB.topLeft.y + boundsB.height &&
-                                   boundsA.topLeft.y + boundsA.height > boundsB.topLeft.y;
-
-                    if (overlap) {
-                        auto shapesA = transformShapes(objA->GetShapes(), objA->GetLocation(),
-                                                       objA->GetRotation());
-                        auto shapesB = transformShapes(objB->GetShapes(), objB->GetLocation(),
-                                                       objB->GetRotation());
-
-                        Point2D collisionPoint;
-                        bool hit = false;
-
-                        for (const auto& shapeA : shapesA) {
-                            for (const auto& shapeB : shapesB) {
-                                if (ShapesIntersect(shapeA, shapeB, collisionPoint)) {
-                                    hit = true;
-                                    break;
-                                }
-                            }
-                            if (hit) break;
-                        }
-
-                        if (hit) {
-                            objA->CollisionEnter(objB);
-                            objB->CollisionEnter(objA);
-                            objA->CollisionEnter(objB, collisionPoint);
-                            objB->CollisionEnter(objA, collisionPoint);
-                        }
+                if (it != mKeyUpNotifications.end()) {
+                    // send each registered notification
+                    for (const auto& message : it->second) {
+                        mNotificationManager.Notify(message);
                     }
                 }
             }
-
-            // 5. Late updates
-            // give each active object a chance to update after collision processing. Logic that
-            // should happen after collisions
-            for (const auto& gameObject : mGameObjects) {
-                context.CurrObject = gameObject;
-                gameObject->LateUpdate(&context);
-            }
-
-            // Clear window
-            mWindow->clear();
-
-            // 6. Render background
-            for (const auto& gameObject : mGameObjects) {
-                // check if this gameObject is a GraphicsObject since only they should be rendered
-                auto graphicsObj = std::dynamic_pointer_cast<GraphicsObject>(gameObject);
-
-                if (graphicsObj != nullptr) {
-                    context.CurrObject = gameObject;
-
-                    // set the objects position and rotation
-                    screenContext.SetContextOffset(graphicsObj->GetLocation());
-                    screenContext.SetContextRotation(graphicsObj->GetRotation());
-
-                    // draw background
-                    graphicsObj->RenderBackground(&context);
-                }
-            }
-
-            // 7. Render foreground
-            for (const auto& gameObject : mGameObjects) {
-                auto graphicsObj = std::dynamic_pointer_cast<GraphicsObject>(gameObject);
-
-                if (graphicsObj != nullptr) {
-                    context.CurrObject = gameObject;
-
-                    // set the objects position and rotation
-                    screenContext.SetContextOffset(graphicsObj->GetLocation());
-                    screenContext.SetContextRotation(graphicsObj->GetRotation());
-
-                    // draw the foreground
-                    graphicsObj->RenderForeground(&context);
-                }
-            }
-
-            // render GUI
-            for (const auto& gameObject : mGameObjects) {
-                context.CurrObject = gameObject;
-                // GUI is drawn without object transformations
-                guiContext.SetContextOffset({0, 0});
-                guiContext.SetContextRotation(0.0f);
-
-                gameObject->RenderUI(&context);
-            }
-
-            context.CurrObject.reset();
-
-            // Actually render to window
-            mWindow->display();
-
-            // increases the frame counter once per completed frame
-            context.currentFrame++;
         }
+
+        // 3. Update game objects
+        // upate every game object in mGameObjects
+        for (const auto& gameObject : mGameObjects) {
+            context.CurrObject = gameObject;
+            gameObject->Update(&context);
+        }
+
+        // 4. Process collision events
+        // loop through every game object
+        for (size_t a = 0; a < mGameObjects.size(); a++) {
+            for (size_t b = a + 1; b < mGameObjects.size(); b++) {
+                auto objA = std::dynamic_pointer_cast<CollisionObject>(mGameObjects[a]);
+                auto objB = std::dynamic_pointer_cast<CollisionObject>(mGameObjects[b]);
+
+                if (objA == nullptr || objB == nullptr) {
+                    continue;
+                }
+
+                Rect boundsA = objA->GetBounds();
+                Rect boundsB = objB->GetBounds();
+
+                bool overlap = boundsA.topLeft.x < boundsB.topLeft.x + boundsB.width &&
+                               boundsA.topLeft.x + boundsA.width > boundsB.topLeft.x &&
+                               boundsA.topLeft.y < boundsB.topLeft.y + boundsB.height &&
+                               boundsA.topLeft.y + boundsA.height > boundsB.topLeft.y;
+
+                if (overlap) {
+                    auto shapesA = transformShapes(objA->GetShapes(), objA->GetLocation(),
+                                                   objA->GetRotation());
+                    auto shapesB = transformShapes(objB->GetShapes(), objB->GetLocation(),
+                                                   objB->GetRotation());
+
+                    Point2D collisionPoint;
+                    bool hit = false;
+
+                    for (const auto& shapeA : shapesA) {
+                        for (const auto& shapeB : shapesB) {
+                            if (ShapesIntersect(shapeA, shapeB, collisionPoint)) {
+                                hit = true;
+                                break;
+                            }
+                        }
+                        if (hit) break;
+                    }
+
+                    if (hit) {
+                        objA->CollisionEnter(objB);
+                        objB->CollisionEnter(objA);
+                        objA->CollisionEnter(objB, collisionPoint);
+                        objB->CollisionEnter(objA, collisionPoint);
+                    }
+                }
+            }
+        }
+
+        // 5. Late updates
+        // give each active object a chance to update after collision processing. Logic that
+        // should happen after collisions
+        for (const auto& gameObject : mGameObjects) {
+            context.CurrObject = gameObject;
+            gameObject->LateUpdate(&context);
+        }
+
+        // Clear window
+        mWindow->clear();
+
+        // 6. Render background
+        for (const auto& gameObject : mGameObjects) {
+            // check if this gameObject is a GraphicsObject since only they should be rendered
+            auto graphicsObj = std::dynamic_pointer_cast<GraphicsObject>(gameObject);
+
+            if (graphicsObj != nullptr) {
+                context.CurrObject = gameObject;
+
+                // set the objects position and rotation
+                screenContext.SetContextOffset(graphicsObj->GetLocation());
+                screenContext.SetContextRotation(graphicsObj->GetRotation());
+
+                // draw background
+                graphicsObj->RenderBackground(&context);
+            }
+        }
+
+        // 7. Render foreground
+        for (const auto& gameObject : mGameObjects) {
+            auto graphicsObj = std::dynamic_pointer_cast<GraphicsObject>(gameObject);
+
+            if (graphicsObj != nullptr) {
+                context.CurrObject = gameObject;
+
+                // set the objects position and rotation
+                screenContext.SetContextOffset(graphicsObj->GetLocation());
+                screenContext.SetContextRotation(graphicsObj->GetRotation());
+
+                // draw the foreground
+                graphicsObj->RenderForeground(&context);
+            }
+        }
+
+        // render GUI
+        for (const auto& gameObject : mGameObjects) {
+            context.CurrObject = gameObject;
+            // GUI is drawn without object transformations
+            guiContext.SetContextOffset({0, 0});
+            guiContext.SetContextRotation(0.0f);
+
+            gameObject->RenderUI(&context);
+        }
+
+        context.CurrObject.reset();
+
+        // Actually render to window
+        mWindow->display();
+
+        // increases the frame counter once per completed frame
+        context.currentFrame++;
     }
-
-    // Sample code for processing events
-
-    // bool GameEngine::ProcessEvents(GameContext *context)
-    //{
-    //	while (const std::optional event = mWindow->pollEvent())
-    //	{
-    //		if (event->is<sf::Event::Closed>())
-    //		{
-    //		}
-    //		else if (event->is<sf::Event::Resized>())
-    //		{
-    //		}
-    //		else if (const auto* keyPressed = event->getIf<sf::Event::TextEntered>())
-    //		{
-    //			// use keyPressed->unicode to get character
-    //		}
-    //	}
-    // }
+}
 
 }  // namespace CMPUT350

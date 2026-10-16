@@ -5,7 +5,6 @@
 
 #include "CollisionObject.h"
 
-
 // forward decleration of the class Bullet
 class Bullet;
 
@@ -32,11 +31,16 @@ public:
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
-    std::vector<CMPUT350::ShapeUnion> GetShapes() override;
+    const std::vector<CMPUT350::ShapeUnion>& GetShapes() override;
 
 private:
     // store the players current location
     CMPUT350::Point2D mLocation;
+
+    // Local-space collision shape (a circle centered on the origin) — the engine offsets
+    // by GetLocation() when it transforms shapes to world space, so this never changes
+    // and is built once in the constructor
+    std::vector<CMPUT350::ShapeUnion> mShapes;
 
     // weak pointer because Player only wants to
     // keep track of whether its bullets still exist

@@ -23,12 +23,12 @@ struct ShapeUnion {
 
 class CollisionObject : public GraphicsObject {
 public:
-    virtual void CollisionEnter(const std::shared_ptr<CollisionObject> &obj) = 0;
-    virtual const Rect &GetBounds() = 0;
+    virtual void CollisionEnter(const std::shared_ptr<CollisionObject>& obj) = 0;
+    virtual const Rect& GetBounds() = 0;
 
-    virtual std::vector<ShapeUnion> GetShapes() = 0;
-    virtual void CollisionEnter(const std::shared_ptr<CollisionObject> &,
-                                const Point2D &collisionPoint) {}
+    virtual const std::vector<ShapeUnion>& GetShapes() = 0;
+    virtual void CollisionEnter(const std::shared_ptr<CollisionObject>&,
+                                const Point2D& collisionPoint) {}
 };
 
 }  // namespace CMPUT350
