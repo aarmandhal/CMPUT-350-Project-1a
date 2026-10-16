@@ -24,6 +24,8 @@ Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool playe
     this->mAlive = true;
     // Set bounding box
     this->mBounds = CMPUT350::Rect(this->mPrevLocation, this->mCurrentLocation);
+    // Build initial shape so GetShapes() never returns empty
+    this->RebuildShapes();
 }
 
 // Return if bullet is fired by player
@@ -31,6 +33,22 @@ bool Bullet::IsPlayerBullet() { return this->mIsPlayer; }
 
 // Empty as constructor already did all the setup the object needs
 void Bullet::Initialize(CMPUT350::GameContext* context) {}
+
+// Rebuild the local-space collision shape from the current prev/current positions.
+// Local space means relative to mCurrentLocation, since the engine offsets by
+// GetLocation() when it transforms shapes to world space.
+void Bullet::RebuildShapes() {
+    CMPUT350::Point2D localStart = this->mPrevLocation - this->mCurrentLocation;
+    CMPUT350::Point2D localEnd = CMPUT350::Point2D(0, 0);
+    CMPUT350::Line localLine = CMPUT350::Line(localStart, localEnd);
+
+    CMPUT350::ShapeUnion shapeUnion;
+    shapeUnion.type = CMPUT350::ShapeType::Line;
+    shapeUnion.line = localLine;
+
+    this->mShapes.clear();
+    this->mShapes.push_back(shapeUnion);
+}
 
 // Update bullet location
 void Bullet::Update(CMPUT350::GameContext* context) {
@@ -44,7 +62,19 @@ void Bullet::Update(CMPUT350::GameContext* context) {
     this->mCurrentLocation += this->mHeading;
     // Update bounding box
     this->mBounds = CMPUT350::Rect(this->mPrevLocation, this->mCurrentLocation);
+    // Rebuild shapes
+    this->RebuildShapes();
 }
+
+// Get collision shapes
+const std::vector<CMPUT350::ShapeUnion>& Bullet::GetShapes() { return this->mShapes; }
+
+// Center of the bullet with respect to rotation — bullets don't rotate,
+// so this is just the current position
+CMPUT350::Point2D Bullet::GetLocation() const { return this->mCurrentLocation; }
+
+// Bullets never rotate
+float Bullet::GetRotation() const { return 0.0f; }
 
 // Check if bullet is outside of screen
 void Bullet::LateUpdate(CMPUT350::GameContext* context) {
@@ -121,13 +151,3 @@ bool Bullet::IsAlive() const {
 
 // Get bounding box of bullet
 const CMPUT350::Rect& Bullet::GetBounds() { return this->mBounds; }
-
-// Get the collision shape of the bullet
-std::vector<CMPUT350::ShapeUnion> Bullet::GetShapes() {
-    CMPUT350::ShapeUnion shape;
-    shape.type = CMPUT350::ShapeType::Circle;
-    shape.circle =
-        CMPUT350::Circle(mBounds.topLeft + CMPUT350::Point2D(mBounds.width / 2, mBounds.height / 2),
-                         std::max(mBounds.width, mBounds.height) / 2);
-    return {shape};
-}

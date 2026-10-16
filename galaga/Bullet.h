@@ -17,18 +17,24 @@ public:
     void LateUpdate(CMPUT350::GameContext* context) override;
     bool HandleKeyEvent(CMPUT350::GameContext* context, char key) override;
     bool IsAlive() const override;
-    void Kill() override;
+    void Kill();
 
     // Graphics Object Functions
     void RenderBackground(CMPUT350::GameContext* context) override;
     void RenderForeground(CMPUT350::GameContext* context) override;
+    CMPUT350::Point2D GetLocation() const override;
+    float GetRotation() const override;
 
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
-    std::vector<CMPUT350::ShapeUnion> GetShapes() override;
+    const std::vector<CMPUT350::ShapeUnion>& GetShapes() override;
 
 private:
+    // Rebuilds mShapes (a local-space Line) from the current prev/current positions.
+    // Must be called any time mPrevLocation/mCurrentLocation change.
+    void RebuildShapes();
+
     // Location of the bullet at the previous frame
     CMPUT350::Point2D mPrevLocation;
     // Location of the bullet at the current frame
@@ -41,5 +47,7 @@ private:
     bool mAlive;
     // Bounding box of the bullet
     CMPUT350::Rect mBounds;
+    // Local-space collision shapes, rebuilt every Update since the bullet moves
+    std::vector<CMPUT350::ShapeUnion> mShapes;
 };
 #endif  // BULLET_H

@@ -15,16 +15,24 @@ const int DEBUG_LINE = 1;
 // Members
 
 Enemy::Enemy(CMPUT350::Point2D loc) {
-    // TODO: Update code
-    // Constructor for enemy
     // Set location
     this->mLocation = loc;
     // Set alive to true
     this->mAlive = true;
     // Set bounding box
-    CMPUT350::Point2D halfSize(ENEMY_WIDTH / 2, ENEMY_HEIGHT / 2);
-    this->mBounds = CMPUT350::Rect(loc - halfSize, loc + halfSize);
+    CMPUT350::Point2D halfSize(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
+    this->mBounds = CMPUT350::Rect(loc - halfSize, ENEMY_WIDTH, ENEMY_HEIGHT);
+
+    // Local-space shape, centered on local origin — the engine offsets by mLocation later
+    CMPUT350::Rect localRect = CMPUT350::Rect(
+        CMPUT350::Point2D(-ENEMY_WIDTH / 2.0f, -ENEMY_HEIGHT / 2.0f), ENEMY_WIDTH, ENEMY_HEIGHT);
+    CMPUT350::ShapeUnion shapeUnion;
+    shapeUnion.type = CMPUT350::ShapeType::Rect;
+    shapeUnion.rect = localRect;
+    this->mShapes.push_back(shapeUnion);
 }
+
+const std::vector<CMPUT350::ShapeUnion>& Enemy::GetShapes() { return this->mShapes; }
 
 // Empty as constructor already did all the setup the object needs
 void Enemy::Initialize(CMPUT350::GameContext* context) {}
@@ -81,12 +89,3 @@ bool Enemy::IsAlive() const { return this->mAlive; }
 
 // Get bounding box of enemy
 const CMPUT350::Rect& Enemy::GetBounds() { return this->mBounds; }
-
-std::vector<CMPUT350::ShapeUnion> Enemy::GetShapes() {
-    CMPUT350::ShapeUnion shape;
-    shape.type = CMPUT350::ShapeType::Circle;
-    shape.circle =
-        CMPUT350::Circle(mBounds.topLeft + CMPUT350::Point2D(mBounds.width / 2, mBounds.height / 2),
-                         std::max(mBounds.width, mBounds.height) / 2);
-    return {shape};
-}
