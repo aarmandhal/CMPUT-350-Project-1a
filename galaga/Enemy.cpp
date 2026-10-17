@@ -4,7 +4,6 @@
 #include <cstdlib>
 
 #include "Bullet.h"
-
 #include "NotificationManager.h"
 
 // Constants
@@ -71,10 +70,9 @@ void Enemy::StartAttack() {
     this->mAttackState = AttackState::Attacking;
     this->mPathT = 0.0f;
 
-    // schedule a shot shortly after starting an attack
+    // Schedule a shot shortly after starting an attack
     if (this->mContext != nullptr) {
-        this->mNextFireFrame =
-            this->mContext->currentFrame + CMPUT350::RandomInt(10, 25);
+        this->mNextFireFrame = this->mContext->currentFrame + CMPUT350::RandomInt(10, 25);
     }
 }
 
@@ -84,13 +82,19 @@ void Enemy::Update(CMPUT350::GameContext* context) {
         return;
     }
     if (this->mAttackState == AttackState::Attacking) {
-        this->mPathT += this->mPathSpeed;
+        // Step t by distance / ||B'(t)|| so the enemy moves a constant number of pixels per frame
+        CMPUT350::Point2D slope = this->mAttackPath.GetSlope(this->mPathT);
+        float slopeMagnitude = slope.Distance(CMPUT350::Point2D(0, 0));
+        if (slopeMagnitude > 0.0001f) {
+            this->mPathT += this->mDesiredPixelSpeed / slopeMagnitude;
+        }
+
         int maxT = (this->mAttackPath.controlPoints.size() - 1) / 3;
         if (this->mPathT >= maxT) {
             this->mAttackState = AttackState::Returning;
         } else {
             this->mLocation = this->mAttackPath.GetPoint(this->mPathT);
-            CMPUT350::Point2D slope = this->mAttackPath.GetSlope(this->mPathT);
+            slope = this->mAttackPath.GetSlope(this->mPathT);
             this->mRotation = std::atan2(slope.y, slope.x) + (PI / 2.0f);
             RebuildBoundsAt(this->mLocation);
         }
@@ -110,7 +114,6 @@ void Enemy::Update(CMPUT350::GameContext* context) {
     // only shoot while attacking
     if (this->mAttackState == AttackState::Attacking &&
         context->currentFrame >= this->mNextFireFrame) {
-
         FireAt(context);
         this->mNextFireFrame = context->currentFrame + CMPUT350::RandomInt(30, 60);
     }

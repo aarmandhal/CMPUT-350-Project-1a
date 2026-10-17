@@ -8,5 +8,5 @@ MidEnemy::MidEnemy(CMPUT350::Point2D loc) : Enemy(loc, CMPUT350::Colors::magenta
         loc + CMPUT350::Point2D(70, 180),
         loc + CMPUT350::Point2D(-20, 280),
     };
-    this->mPathSpeed = 0.03f;
+    this->mDesiredPixelSpeed = 4.0f;
 }

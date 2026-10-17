@@ -58,8 +58,10 @@ protected:
     CMPUT350::Bezier mAttackPath;
     AttackState mAttackState = AttackState::Formation;
     CMPUT350::Point2D mFormationLocation;
+    // Current Bezier parameter along the attack path
     float mPathT = 0.0f;
-    float mPathSpeed = 0.03f;
+    // Constant spatial speed along the attack path, in pixels per frame
+    float mDesiredPixelSpeed = 3.0f;
     float mRotation = 0.0f;
 };
 

@@ -8,5 +8,5 @@ StrongEnemy::StrongEnemy(CMPUT350::Point2D loc) : Enemy(loc, CMPUT350::Colors::y
         loc + CMPUT350::Point2D(-90, 170),
         loc + CMPUT350::Point2D(0, 300),
     };
-    this->mPathSpeed = 0.018f;
+    this->mDesiredPixelSpeed = 3.0f;
 }
