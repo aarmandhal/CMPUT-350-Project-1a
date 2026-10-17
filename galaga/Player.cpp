@@ -1,123 +1,184 @@
-#include <cassert>
 #include "Player.h"
+
+#include <cassert>
+
 #include "Bullet.h"
+#include "EngineView.h"
+#include "GameContext.h"
+#include "NotificationManager.h"
+#include "Enemy.h"
 
-Player::Player(CMPUT350::Point2D loc)
-{
+Player::Player(CMPUT350::Point2D loc) {
     mLocation = loc;
+
+    // Local-space collision shape: a circle centered on the origin, matching the
+    // 40x40 box GetBounds() uses (radius = half of that, i.e. 20)
+    const float radius = 20.0f;
+    CMPUT350::ShapeUnion shape;
+    shape.type = CMPUT350::ShapeType::Circle;
+    shape.circle = CMPUT350::Circle(CMPUT350::Point2D(0, 0), radius);
+    mShapes.push_back(shape);
 }
 
-void Player::Initialize(CMPUT350::GameContext* context)
-{
+void Player::Initialize(CMPUT350::GameContext* context) {
+    // save the context for creating bullets
+    mContext = context;
+    mSelf = context->CurrObject;
+
+    // get access to the notification manager
+    auto manager = context->mNotificationManager;
+
+    // register this player to receive the messages
+    manager->Register(context->CurrObject, "left_down");
+    manager->Register(context->CurrObject, "left_up");
+    manager->Register(context->CurrObject, "right_down");
+    manager->Register(context->CurrObject, "right_up");
+    manager->Register(context->CurrObject, "fire_down");
+    manager->Register(context->CurrObject, "fire_up");
 }
 
-void Player::Update(CMPUT350::GameContext* context)
-{
-}
-
-void Player::LateUpdate(CMPUT350::GameContext* context)
-{
-}
-
-bool Player::HandleKeyEvent(CMPUT350::GameContext* context, char key)
-{
-    const float moveAmount = 20;
+void Player::Update(CMPUT350::GameContext* context) {
+    const float moveAmount = 10;
     const float halfSize = 20;
 
     int screenWidth = context->ScreenContext->GetWindowWidth();
 
-    if (key == 'a' || key == 'A')
-    {
-        mLocation.x -= moveAmount; // move left
-
-        // for player to stay on screen
-        if (mLocation.x < halfSize)
-            mLocation.x = halfSize;
-
-        return true;
+    // move left while a is held
+    if (mMovingLeft) {
+        mLocation.x -= moveAmount;
     }
 
-    else if (key == 'd' || key == 'D') {
-        mLocation.x += moveAmount; // move right
-
-        // for player to stay on screen
-        if (mLocation.x > screenWidth - halfSize) {
-            mLocation.x = screenWidth - halfSize;
-        };
-
-        return true;
+    // move right while d is held
+    if (mMovingRight) {
+        mLocation.x += moveAmount;
     }
 
-    // Note: a weak_ptr is not destroyed when its Bullet is destroyed.
-    // it just becomes expired which means that bullet slot is free to be used again
-    else if (key == ' ') {
-        // bullets movement direction. x movement is 0, y is -10
-        CMPUT350::Point2D heading(0, -10);
+    // keep the player inside the left side of the screen
+    if (mLocation.x < halfSize) {
+        mLocation.x = halfSize;
+    }
 
+    // keep the player inside the right side of the screen
+    if (mLocation.x > screenWidth - halfSize) {
+        mLocation.x = screenWidth - halfSize;
+    }
+}
+
+void Player::LateUpdate(CMPUT350::GameContext* context) {}
+
+void Player::ReceiveNotification(const std::string& message) {
+    // ignore input when the player is dead
+    if (!mAlive) {
+        return;
+    }
+
+    // start moving left when a is pressed
+    if (message == "left_down") {
+        mMovingLeft = true;
+    }
+
+    // stop moving left when a is released
+    else if (message == "left_up") {
+        mMovingLeft = false;
+    }
+
+    // start moving right when d is pressed
+    else if (message == "right_down") {
+        mMovingRight = true;
+    }
+
+    // stop moving right when d is released
+    else if (message == "right_up") {
+        mMovingRight = false;
+    }
+
+    // allow shooting again when space is released
+    else if (message == "fire_up") {
+        mFiring = false;
+    }
+
+    // shoot once when space is pressed
+    else if (message == "fire_down" && !mFiring) {
+        mFiring = true;
+
+        // bullets move straight upward
+        CMPUT350::Vector2D heading(0, -10);
+
+        // create a bullet if the first slot is free
         if (mBullet1.expired()) {
-            // create a new bullet object
-            auto bullet = std::make_shared<Bullet>(
-                mLocation, // stat the bullet where the player is
-                heading, // move straigh up (y=-10)
-                true);
+            // pass mSelf as the firer so the bullet ignores collisions with the player
+            auto bullet = std::make_shared<Bullet>(mLocation, heading, true, mSelf);
 
             mBullet1 = bullet;
-            context->mEngineView->AddGameObject(bullet);
+            mContext->mEngineView->AddGameObject(bullet);
         }
 
+        // otherwise use the second slot
         else if (mBullet2.expired()) {
-            auto bullet = std::make_shared<Bullet>(mLocation, heading, true);
+            auto bullet = std::make_shared<Bullet>(mLocation, heading, true, mSelf);
 
             mBullet2 = bullet;
-            context->mEngineView->AddGameObject(bullet);
+            mContext->mEngineView->AddGameObject(bullet);
         }
-
-        return true;
     }
-
-    return false;
-
 }
 
-void Player::RenderBackground(CMPUT350::GameContext* context)
-{
-}
+// return the players current location
+CMPUT350::Point2D Player::GetLocation() const { return mLocation; }
 
-void Player::RenderForeground(CMPUT350::GameContext* context)
-{
+// return the players rotation
+float Player::GetRotation() const { return 0.0f; }
+
+void Player::RenderBackground(CMPUT350::GameContext* context) {}
+
+void Player::RenderForeground(CMPUT350::GameContext* context) {
     const float halfSize = 20.0f;
 
-    // same x as the center but 20 pixels upward
-    CMPUT350::Point2D top(mLocation.x, mLocation.y - halfSize);
+    // triangle points relative to the players center
+    CMPUT350::Point2D top(0, -halfSize);
+    CMPUT350::Point2D bottomLeft(-halfSize, halfSize);
+    CMPUT350::Point2D bottomRight(halfSize, halfSize);
 
-    // 20 pixels left and 20 pixels down
-    CMPUT350::Point2D bottomLeft(mLocation.x - halfSize, mLocation.y + halfSize);
-
-    // 20 pixels right and 20 pixels down
-    CMPUT350::Point2D bottomRight(mLocation.x + halfSize, mLocation.y + halfSize);
-
-    // connect the three points with lines
+    // draw the player triangle
     context->ScreenContext->DrawLine(top, bottomLeft, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomLeft, bottomRight, 3, CMPUT350::Colors::green);
     context->ScreenContext->DrawLine(bottomRight, top, 3, CMPUT350::Colors::green);
+}
+
+void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) {
+    // ignore collisions if the player is already dead
+    if (!mAlive) {
+        return;
+    }
+
+    // check if the collision was with a bullet
+    auto bullet = std::dynamic_pointer_cast<Bullet>(obj);
+
+    // kill the player only if it is an enemy bullet
+    if (bullet && !bullet->IsPlayerBullet()) {
+        Kill();
+    }
+
+    // kill the player if an enemy ship collides with it
+    auto enemy = std::dynamic_pointer_cast<Enemy>(obj);
+
+    if (enemy) {
+        Kill();
+    }
 
 }
 
-void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj)
-{
+void Player::Kill() {
+    // mark the player as dead
+    mAlive = false;
 }
 
-void Player::Kill()
-{
+bool Player::IsAlive() const {
+    // return whether player is alive or not
+    return mAlive;
 }
 
-bool Player::IsAlive() const
-{
-    return true;
-}
-
-const CMPUT350::Rect& Player::GetBounds()
-{
+const CMPUT350::Rect& Player::GetBounds() {
     const float halfSize = 20.0f;
 
     // static so the returned reference stays valid
@@ -130,3 +191,7 @@ const CMPUT350::Rect& Player::GetBounds()
 
     return playerBound;
 }
+
+// Get the collision shape of the player (local space — built once in the constructor,
+// since the engine adds GetLocation() on top when transforming shapes to world space)
+const std::vector<CMPUT350::ShapeUnion>& Player::GetShapes() { return mShapes; }

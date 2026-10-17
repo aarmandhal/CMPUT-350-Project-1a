@@ -10,6 +10,9 @@ class GameEngine;
 #include "GameObject.h"
 #include "MathUtil.h"
 #include <SFML/Graphics.hpp>
+#include <string>
+#include <unordered_map>
+#include "NotificationManager.h"
 
 namespace CMPUT350 {
 
@@ -27,6 +30,17 @@ public:
 
     void AddGameObject(std::shared_ptr<GameObject> gameObject) override;
 
+    // notifications for key presses and releases
+    void InstallKeyDownNotification(int key, const std::string& notification) override;
+    void InstallKeyUpNotification(int key, const std::string& notification) override;
+
+    // return iterators to access the game objects
+    const_iterator cbegin() const override;
+    const_iterator cend() const override;
+    const_iterator begin() const override;
+    const_iterator end() const override;
+
+
     void Run();
 
 private:
@@ -35,6 +49,13 @@ private:
 
         std::vector<std::shared_ptr<GameObject>> mGameObjects; // objects currently in the game
         std::vector<std::shared_ptr<GameObject>> mNewGameObjects; // objects waiting to be added to the game
+
+        // manage notifications sent to game objects
+        NotificationManager mNotificationManager;
+
+        // store messages associated with key presses and releases
+        std::unordered_map<int, std::vector<std::string>> mKeyDownNotifications;
+        std::unordered_map<int, std::vector<std::string>> mKeyUpNotifications;
 };
 
 }  // namespace CMPUT350

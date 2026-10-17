@@ -11,8 +11,7 @@ const bool DEBUG_BOXES = false;
 // Width of debug line
 const int DEBUG_LINE = 1;
 
-Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player) {
-    // Set previous location to current location
+Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Vector2D heading, bool player, std::weak_ptr<CMPUT350::GameObject> firer) { // set previous location to current location
     this->mPrevLocation = location;
     // Set current location
     this->mCurrentLocation = location;
@@ -20,10 +19,21 @@ Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool playe
     this->mHeading = heading;
     // Set if bullet is fired by player
     this->mIsPlayer = player;
+    // Remember who fired this bullet so we can ignore collisions against them
+    this->mFirer = firer;
     // Bullet starts alive
     this->mAlive = true;
     // Set bounding box
     this->mBounds = CMPUT350::Rect(this->mPrevLocation, this->mCurrentLocation);
+
+    // add padding so vertical and horizontal bullets have nonzero bounds
+    this->mBounds.topLeft.x -= 2;
+    this->mBounds.topLeft.y -= 2;
+    this->mBounds.width += 4;
+    this->mBounds.height += 4;
+
+    // Build initial shape so GetShapes() never returns empty
+    this->RebuildShapes();
 }
 
 // Return if bullet is fired by player
@@ -31,6 +41,22 @@ bool Bullet::IsPlayerBullet() { return this->mIsPlayer; }
 
 // Empty as constructor already did all the setup the object needs
 void Bullet::Initialize(CMPUT350::GameContext* context) {}
+
+// Rebuild the local-space collision shape from the current prev/current positions.
+// Local space means relative to mCurrentLocation, since the engine offsets by
+// GetLocation() when it transforms shapes to world space.
+void Bullet::RebuildShapes() {
+    CMPUT350::Vector2D localStart = this->mPrevLocation - this->mCurrentLocation;
+    CMPUT350::Point2D localEnd = CMPUT350::Point2D(0, 0);
+    CMPUT350::Line localLine = CMPUT350::Line(localStart, localEnd);
+
+    CMPUT350::ShapeUnion shapeUnion;
+    shapeUnion.type = CMPUT350::ShapeType::Line;
+    shapeUnion.line = localLine;
+
+    this->mShapes.clear();
+    this->mShapes.push_back(shapeUnion);
+}
 
 // Update bullet location
 void Bullet::Update(CMPUT350::GameContext* context) {
@@ -44,7 +70,27 @@ void Bullet::Update(CMPUT350::GameContext* context) {
     this->mCurrentLocation += this->mHeading;
     // Update bounding box
     this->mBounds = CMPUT350::Rect(this->mPrevLocation, this->mCurrentLocation);
+
+    // add padding around the bullet
+    this->mBounds.topLeft.x -= 2;
+    this->mBounds.topLeft.y -= 2;
+    this->mBounds.width += 4;
+    this->mBounds.height += 4;
+    
+    // Rebuild shapes
+    this->RebuildShapes();
 }
+
+// Get collision shapes (local space — a line from the previous position to the
+// current one, relative to mCurrentLocation, since GetLocation() offsets the rest)
+const std::vector<CMPUT350::ShapeUnion>& Bullet::GetShapes() { return this->mShapes; }
+
+// Center of the bullet with respect to rotation — bullets don't rotate,
+// so this is just the current position
+CMPUT350::Point2D Bullet::GetLocation() const { return this->mCurrentLocation; }
+
+// Bullets never rotate
+float Bullet::GetRotation() const { return 0.0f; }
 
 // Check if bullet is outside of screen
 void Bullet::LateUpdate(CMPUT350::GameContext* context) {
@@ -64,9 +110,6 @@ void Bullet::LateUpdate(CMPUT350::GameContext* context) {
     }
 }
 
-// Empty as bullets ignore keyboard input
-bool Bullet::HandleKeyEvent(CMPUT350::GameContext* context, char key) { return false; }
-
 // Empty as bullets only draw in the foreground pass
 void Bullet::RenderBackground(CMPUT350::GameContext* context) {}
 
@@ -78,12 +121,17 @@ void Bullet::RenderForeground(CMPUT350::GameContext* context) {
     }
     // Set color based on if bullet is fired by player
     CMPUT350::RGBColor color = this->mIsPlayer ? CMPUT350::Colors::red : CMPUT350::Colors::blue;
-    // Draw bullet as a line
-    context->ScreenContext->DrawLine(this->mPrevLocation, this->mCurrentLocation, LINE_WIDTH,
-                                     color);
+    // Draw bullet as a line, in local space — the engine has already offset the draw
+    // context by GetLocation() (mCurrentLocation), so drawing mPrevLocation/mCurrentLocation
+    // directly (world space) would double-offset it. mCurrentLocation's local point is the
+    // origin by definition; mPrevLocation's local point is the same vector RebuildShapes() uses.
+    CMPUT350::Vector2D localPrev = this->mPrevLocation - this->mCurrentLocation;
+    CMPUT350::Point2D localCurrent(0, 0);
+    context->ScreenContext->DrawLine(localPrev, localCurrent, LINE_WIDTH, color);
     // Draw debug box if enabled
     if (DEBUG_BOXES) {
-        context->ScreenContext->FrameRect(this->mBounds, DEBUG_LINE, CMPUT350::Colors::yellow);
+        CMPUT350::Rect localBounds(localPrev, localCurrent);
+        context->ScreenContext->FrameRect(localBounds, DEBUG_LINE, CMPUT350::Colors::yellow);
     }
 }
 
@@ -92,6 +140,12 @@ void Bullet::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& ob
     // Don't process collisions if bullet is dead
     if (!this->mAlive) {
         return;
+    }
+    // Ignore collisions against whoever fired this bullet
+    if (auto firer = this->mFirer.lock()) {
+        if (firer.get() == obj.get()) {
+            return;
+        }
     }
     // If bullet is fired by player
     if (this->mIsPlayer) {

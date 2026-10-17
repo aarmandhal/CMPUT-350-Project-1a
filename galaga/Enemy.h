@@ -6,31 +6,69 @@
 
 class Enemy : public CMPUT350::CollisionObject {
 public:
-    Enemy(CMPUT350::Point2D loc);
+    Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int pointValue);
 
     // GameObject Functions
     void Initialize(CMPUT350::GameContext* context) override;
     void Update(CMPUT350::GameContext* context) override;
     void LateUpdate(CMPUT350::GameContext* context) override;
-    bool HandleKeyEvent(CMPUT350::GameContext* context, char key) override;
     bool IsAlive() const override;
     void Kill() override;
+    void FireAt(CMPUT350::GameContext* context);
+    void StartAttack();
 
     // Graphics Object Functions
     void RenderBackground(CMPUT350::GameContext* context) override;
     void RenderForeground(CMPUT350::GameContext* context) override;
 
+    // return the enemy's position and rotation and point value
+    CMPUT350::Point2D GetLocation() const override;
+    float GetRotation() const override;
+    int GetPointValue() const { return this->mPointVal; }
+    bool IsInFormation() const { return this->mAttackState == AttackState::Formation; }
+    bool IsEntering() const { return this->mAttackState == AttackState::Entering; }
+
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
     const CMPUT350::Rect& GetBounds() override;
+    const std::vector<CMPUT350::ShapeUnion>& GetShapes() override;
 
 private:
     // True if alive, false if dead
     bool mAlive;
-    // Bounding box of the enemy
+    // Bounding box of the enemy (world space, used for the broad-phase collision check)
     CMPUT350::Rect mBounds;
+    // Local-space bounding rect, centered on the origin — used for drawing relative to
+    // GetLocation(), which the engine now uses to offset the draw context
+    CMPUT350::Rect mLocalBounds;
     // Location of the enemy
     CMPUT350::Point2D mLocation;
+    // Local-space collision shapes, built once in the constructor
+    std::vector<CMPUT350::ShapeUnion> mShapes;
+    void RebuildBoundsAt(CMPUT350::Point2D loc);
+
+protected:
+    int mHealth;
+    int mPointVal;
+    CMPUT350::RGBColor mColor = CMPUT350::Colors::green;
+    CMPUT350::GameContext* mContext = nullptr;
+    std::weak_ptr<CMPUT350::GameObject> mSelf;
+    int mNextFireFrame = 0;
+
+    enum class AttackState { Entering, Formation, Attacking, Returning };
+    CMPUT350::Bezier mAttackPath;
+    CMPUT350::Bezier mEntryPath;
+
+    AttackState mAttackState = AttackState::Entering;
+
+    CMPUT350::Point2D mFormationLocation;
+    // Current Bezier parameter along the attack path
+    float mPathT = 0.0f;
+    float mEntryT = 0.0f;
+    float mEntrySpeed = 0.02f;
+    // Constant spatial speed along the attack path, in pixels per frame
+    float mDesiredPixelSpeed = 3.0f;
+    float mRotation = 0.0f;
 };
 
 #endif

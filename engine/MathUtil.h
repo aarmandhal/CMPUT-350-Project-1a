@@ -3,7 +3,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
+#include <vector>
 
 namespace CMPUT350 {
 
@@ -119,6 +121,9 @@ struct Point2D {
     }
 };
 
+// both names refer to the exact same type
+using Vector2D = Point2D;
+
 static std::ostream& operator<<(std::ostream& os, const Point2D& p) {
     // Outputs the point in the format (x, y)
     os << "(" << p.x << ", " << p.y << ")";
@@ -155,8 +160,8 @@ struct Line {
             return this->p1;
         }
 
-        Point2D ab = this->p2 - this->p1;
-        Point2D ap = p - this->p1;
+        Vector2D ab = this->p2 - this->p1;
+        Vector2D ap = p - this->p1;
         float t = ap.Dot(ab) / ab.Dot(ab);
         float t_clamped = std::max(0.0f, std::min(1.0f, t));
 
@@ -175,9 +180,9 @@ struct Line {
         // Parametric form of the line segments
         // this->p1 + t * (this->p2 - this->p1)
         // other.p1 + u * (other.p2 - other.p1)
-        Point2D r = this->p2 - this->p1;
-        Point2D s = other.p2 - other.p1;
-        Point2D d = other.p1 - this->p1;
+        Vector2D r = this->p2 - this->p1;
+        Vector2D s = other.p2 - other.p1;
+        Vector2D d = other.p1 - this->p1;
         float denominator = Point2D::Cross(r, s);
 
         // If the denominator is 0, the lines are parallel
@@ -219,7 +224,7 @@ struct Rect {
     float width, height;
 
     Rect(float left, float top, float width, float height)
-        : topLeft(Point2D(top, left)), width(width), height(height) {}
+        : topLeft(Point2D(left, top)), width(width), height(height) {}
 
     Rect(Point2D tl = {0, 0}, int w = 0, int h = 0) : topLeft(tl), width(w), height(h) {}
 
@@ -343,6 +348,42 @@ static std::ostream& operator<<(std::ostream& os, const Rect& l) {
     os << "(" << l.topLeft.x << ", " << l.topLeft.y << "), " << l.width << ", " << l.height;
     return os;
 }
+
+struct Bezier {
+    std::vector<Point2D> controlPoints;
+
+    Point2D GetPoint(float t) { return GetPoint(this->controlPoints, t); };
+
+    Vector2D GetSlope(float t) { return GetSlope(this->controlPoints, t); };
+
+    static Point2D GetPoint(const std::vector<Point2D>& points, float t) {
+        int num_segments = (points.size() - 1) / 3;
+        int segmentIndex = (int)floor(t);
+        segmentIndex = std::min(std::max(segmentIndex, 0), num_segments - 1);
+        float localT = t - segmentIndex;
+        Point2D p1 = points[segmentIndex * 3];
+        Point2D p2 = points[segmentIndex * 3 + 1];
+        Point2D p3 = points[segmentIndex * 3 + 2];
+        Point2D p4 = points[segmentIndex * 3 + 3];
+        return (((1 - localT) * (1 - localT) * (1 - localT)) * p1) +
+               (3 * ((1 - localT) * (1 - localT)) * localT * p2) +
+               (3 * (1 - localT) * (localT * localT) * p3) + ((localT * localT * localT) * p4);
+    };
+    static Vector2D GetSlope(const std::vector<Point2D>& points, float t) {
+        int num_segments = (points.size() - 1) / 3;
+        int segmentIndex = (int)floor(t);
+        segmentIndex = std::min(std::max(segmentIndex, 0), num_segments - 1);
+        float localT = t - segmentIndex;
+        Point2D p1 = points[segmentIndex * 3];
+        Point2D p2 = points[segmentIndex * 3 + 1];
+        Point2D p3 = points[segmentIndex * 3 + 2];
+        Point2D p4 = points[segmentIndex * 3 + 3];
+        return (3 * ((1 - localT) * (1 - localT)) * (p2 - p1)) +
+               (6 * (1 - localT) * localT * (p3 - p2)) + (3 * (localT * localT) * (p4 - p3));
+    };
+};
+
+inline int RandomInt(int low, int high) { return low + rand() % (high - low); }
 
 }  // namespace CMPUT350
 
