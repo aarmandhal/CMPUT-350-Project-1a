@@ -25,6 +25,13 @@ Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Vector2D heading, bool play
     this->mAlive = true;
     // Set bounding box
     this->mBounds = CMPUT350::Rect(this->mPrevLocation, this->mCurrentLocation);
+
+    // add padding so vertical and horizontal bullets have nonzero bounds
+    this->mBounds.topLeft.x -= 2;
+    this->mBounds.topLeft.y -= 2;
+    this->mBounds.width += 4;
+    this->mBounds.height += 4;
+
     // Build initial shape so GetShapes() never returns empty
     this->RebuildShapes();
 }
@@ -63,6 +70,13 @@ void Bullet::Update(CMPUT350::GameContext* context) {
     this->mCurrentLocation += this->mHeading;
     // Update bounding box
     this->mBounds = CMPUT350::Rect(this->mPrevLocation, this->mCurrentLocation);
+
+    // add padding around the bullet
+    this->mBounds.topLeft.x -= 2;
+    this->mBounds.topLeft.y -= 2;
+    this->mBounds.width += 4;
+    this->mBounds.height += 4;
+    
     // Rebuild shapes
     this->RebuildShapes();
 }

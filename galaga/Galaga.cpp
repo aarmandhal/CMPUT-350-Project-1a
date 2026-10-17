@@ -89,7 +89,17 @@ void Galaga::ReceiveNotification(const std::string& message)
 
                 // check if the enemy was destroyed
                 if (enemy && !enemy->IsAlive()) {
-                    mScore += enemy->GetPointValue();
+
+                    // get the enemy's base point value
+                    int points = enemy->GetPointValue();
+
+                    // award double points outside formation
+                    if (!enemy->IsInFormation()) {
+                        points *= 2;
+                    }
+
+                    // add points to the player's score
+                    mScore += points;
 
                     if (mEnemiesRemaining > 0) {
                         mEnemiesRemaining--;
@@ -98,10 +108,12 @@ void Galaga::ReceiveNotification(const std::string& message)
                     // remove the destroyed enemy
                     mEnemies.erase(mEnemies.begin() + i);
                 }
+
                 else if (!enemy) {
                     // remove expired enemy references
                     mEnemies.erase(mEnemies.begin() + i);
                 }
+                
                 else {
                     // move to the next enemy
                     i++;
