@@ -6,6 +6,7 @@
 #include "Player.h"
 #include "Stars.h"
 #include "DrawContext.h"
+#include "Enemy.h"
 
 // save the game window dimensions
 Galaga::Galaga(int width, int height)
@@ -39,6 +40,9 @@ void Galaga::Initialize(CMPUT350::GameContext* context)
     manager->Register(context->CurrObject, "coin");
     manager->Register(context->CurrObject, "start");
 
+    // listen for enemies being destroyed
+    manager->Register(context->CurrObject, "enemy_destroyed");
+
     // create the star background
     engine->AddGameObject(std::make_shared<Stars>(250, CMPUT350::Rect(0, 0, mWidth, mHeight))
     );
@@ -61,12 +65,26 @@ void Galaga::ReceiveNotification(const std::string& message)
         mLives = 3;
         mLevel = 1;
         mEnemiesRemaining = 0;
+        mCurrentWave = 0;
+        mEnemiesSpawned = 0;
+        mPlayerDeathFrame = -1;
+        mLastAttackFrame = -1;
 
         // move to the startup state
         mState = State::Startup;
 
         // reset the timer for the startup state
         mStateStartFrame = -1;
+    }
+
+    // update the score and enemy count when an enemy is destroyed
+    else if (message == "enemy_destroyed" &&
+            (mState == State::Waves || mState == State::Gameplay)) {
+
+        if (mEnemiesRemaining > 0) {
+            mEnemiesRemaining--;
+            mScore += 100;
+        }
     }
 }
 
@@ -86,13 +104,15 @@ void Galaga::Update(CMPUT350::GameContext* context)
         }
 
         // create the player if one does not exist
-        if (mPlayer.expired()) {
-            auto player = std::make_shared<Player>(
+        auto player = mPlayer.lock();
+
+        if (!player || !player->IsAlive()) {
+            auto newPlayer = std::make_shared<Player>(
                 CMPUT350::Point2D(mWidth / 2, mHeight - 124)
             );
 
-            mPlayer = player;
-            context->mEngineView->AddGameObject(player);
+            mPlayer = newPlayer;
+            context->mEngineView->AddGameObject(newPlayer);
         }
 
         // wait about three seconds before starting waves
@@ -103,29 +123,38 @@ void Galaga::Update(CMPUT350::GameContext* context)
         }
     }
 
-    // handle player lives during gameplay
-    else if (mState == State::Gameplay) {
-        // check whether the player has been destroyed
-        auto player = mPlayer.lock();
+    // spawn five waves of eight enemies
+    else if (mState == State::Waves) {
 
-        if (!player || !player->IsAlive()) {
-            // lose one life
-            mLives--;
+        // spawn one enemy every 15 frames
+        if (mCurrentWave < 5 &&
+            mEnemiesSpawned < 8 &&
+            (context->currentFrame - mStateStartFrame) % 15 == 0) {
 
-            // enter game over when no lives remain
-            if (mLives <= 0) {
-                mState = State::GameOver;
-                mStateStartFrame = context->currentFrame;
-            }
-            else {
-                // create another player
-                auto player = std::make_shared<Player>(
-                    CMPUT350::Point2D(mWidth / 2, mHeight - 124)
-                );
+            float x = mWidth / 2.0f - 70 + mEnemiesSpawned * 20;
+            float y = 100 + mCurrentWave * 35;
 
-                mPlayer = player;
-                context->mEngineView->AddGameObject(player);
-            }
+            auto enemy = std::make_shared<Enemy>(
+                CMPUT350::Point2D(x, y)
+            );
+
+            context->mEngineView->AddGameObject(enemy);
+            mEnemies.push_back(enemy);
+
+            mEnemiesSpawned++;
+            mEnemiesRemaining++;
+        }
+
+        // move to the next wave after spawning eight enemies
+        if (mEnemiesSpawned == 8) {
+            mCurrentWave++;
+            mEnemiesSpawned = 0;
+        }
+
+        // enter gameplay after all five waves
+        if (mCurrentWave == 5) {
+            mState = State::Gameplay;
+            mStateStartFrame = context->currentFrame;
         }
     }
 
@@ -133,10 +162,83 @@ void Galaga::Update(CMPUT350::GameContext* context)
     else if (mState == State::GameOver) {
         // wait three seconds
         if (context->currentFrame - mStateStartFrame >= 90) {
+
+            // remove the old player
+            if (auto player = mPlayer.lock()) {
+                player->Kill();
+            }
+            mPlayer.reset();
+
+            // remove any surviving enemies
+            for (auto& weakEnemy : mEnemies) {
+                if (auto enemy = weakEnemy.lock()) {
+                    enemy->Kill();
+                }
+            }
+
+            // clear the enemy list
+            mEnemies.clear();
+            mEnemiesRemaining = 0;
+
+            // reset the respawn timer
+            mPlayerDeathFrame = -1;
+
+            // return to the waiting screen
             mState = State::Waiting;
             mStateStartFrame = -1;
         }
     }
+
+    // handle player deaths during waves and gameplay
+    if (mState == State::Waves || mState == State::Gameplay) {
+        auto player = mPlayer.lock();
+
+        if (!player || !player->IsAlive()) {
+
+            // count the lost life only once
+            if (mPlayerDeathFrame == -1) {
+                mLives--;
+                mPlayerDeathFrame = context->currentFrame;
+
+                if (mLives <= 0) {
+                    mState = State::GameOver;
+                    mStateStartFrame = context->currentFrame;
+                    return;
+                }
+            }
+
+            // wait before respawning the player
+            if (context->currentFrame - mPlayerDeathFrame >= 90) {
+                auto newPlayer = std::make_shared<Player>(
+                    CMPUT350::Point2D(mWidth / 2, mHeight - 124)
+                );
+
+                mPlayer = newPlayer;
+                context->mEngineView->AddGameObject(newPlayer);
+                mPlayerDeathFrame = -1;
+            }
+        }
+    }
+
+    // start the next level when all enemies are destroyed
+    if (mState == State::Gameplay && mEnemiesRemaining == 0) {
+
+        // do not advance while the player is dead or respawning
+        auto player = mPlayer.lock();
+
+        if (player && player->IsAlive() && mPlayerDeathFrame == -1) {
+            mLevel++;
+
+            // reset the wave counters
+            mCurrentWave = 0;
+            mEnemiesSpawned = 0;
+
+            // return to startup for the next level
+            mState = State::Startup;
+            mStateStartFrame = -1;
+        }
+    }
+
 }
 
 
@@ -156,6 +258,7 @@ void Galaga::RenderUI(CMPUT350::GameContext* context)
 
     // show instructions while waiting for the game
     if (mState == State::Waiting) {
+        gui->DrawCenteredText("Credits: " + std::to_string(mCoins), 24, {mWidth / 2.0f, mHeight / 2.0f - 50}, CMPUT350::Colors::white);
 
         gui->DrawCenteredText("Press 5 to insert coin", 24, {mWidth / 2.0f, mHeight / 2.0f}, CMPUT350::Colors::white);
 

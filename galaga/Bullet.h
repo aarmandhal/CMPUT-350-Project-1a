@@ -22,7 +22,7 @@ public:
     void Update(CMPUT350::GameContext* context) override;
     void LateUpdate(CMPUT350::GameContext* context) override;
     bool IsAlive() const override;
-    void Kill();
+    void Kill() override;
 
     // Graphics Object Functions
     void RenderBackground(CMPUT350::GameContext* context) override;

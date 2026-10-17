@@ -353,7 +353,7 @@ struct Bezier {
 
     Point2D GetPoint(float t) { return GetPoint(this->controlPoints, t); };
 
-    Point2D GetSlope(float t) { return GetSlope(this->controlPoints, t); };
+    Vector2D GetSlope(float t) { return GetSlope(this->controlPoints, t); };
 
     static Point2D GetPoint(const std::vector<Point2D>& points, float t) {
         int num_segments = (points.size() - 1) / 3;
@@ -368,7 +368,7 @@ struct Bezier {
                (3 * ((1 - localT) * (1 - localT)) * localT * p2) +
                (3 * (1 - localT) * (localT * localT) * p3) + ((localT * localT * localT) * p4);
     };
-    static Point2D GetSlope(const std::vector<Point2D>& points, float t) {
+    static Vector2D GetSlope(const std::vector<Point2D>& points, float t) {
         int num_segments = (points.size() - 1) / 3;
         int segmentIndex = (int)floor(t);
         segmentIndex = std::min(std::max(segmentIndex, 0), num_segments - 1);

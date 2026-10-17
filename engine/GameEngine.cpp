@@ -62,7 +62,7 @@ std::vector<ShapeUnion> transformShapes(const std::vector<ShapeUnion>& localShap
 }
 
 bool CircleVsCircle(Circle a, Circle b, Point2D& out) {
-    Point2D diff = a.center - b.center;
+    Vector2D diff = a.center - b.center;
     float distSq = diff * diff;  // operator* IS the dot product
     float radiusSum = a.radius + b.radius;
 
@@ -71,8 +71,7 @@ bool CircleVsCircle(Circle a, Circle b, Point2D& out) {
     }
 
     float dist = std::sqrt(distSq);
-    Point2D normal =
-        dist > EPSILON ? diff * (1.0f / dist) : Point2D(1, 0);  // no operator/, use operator*
+    Vector2D normal = dist > EPSILON ? diff * (1.0f / dist) : Vector2D(1, 0);  // no operator/, use operator*
     out = a.center - normal * a.radius;
     return true;
 }
@@ -83,7 +82,7 @@ bool LineVsLine(Line a, Line b, Point2D& out) {
 
 bool LineVsCircle(Line l, Circle c, Point2D& out) {
     Point2D closest = l.ClosestPoint(c.center);  // reuse Line's own tested method
-    Point2D diff = closest - c.center;
+    Vector2D diff = closest - c.center;
     if (diff * diff > c.radius * c.radius) {
         return false;
     }
