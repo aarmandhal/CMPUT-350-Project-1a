@@ -6,7 +6,7 @@
 
 class Enemy : public CMPUT350::CollisionObject {
 public:
-    Enemy(CMPUT350::Point2D loc);
+    Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int pointValue);
 
     // GameObject Functions
     void Initialize(CMPUT350::GameContext* context) override;
@@ -14,6 +14,8 @@ public:
     void LateUpdate(CMPUT350::GameContext* context) override;
     bool IsAlive() const override;
     void Kill() override;
+    void FireAt(CMPUT350::GameContext* context);
+    void StartAttack();
 
     // Graphics Object Functions
     void RenderBackground(CMPUT350::GameContext* context) override;
@@ -40,6 +42,23 @@ private:
     CMPUT350::Point2D mLocation;
     // Local-space collision shapes, built once in the constructor
     std::vector<CMPUT350::ShapeUnion> mShapes;
+    void RebuildBoundsAt(CMPUT350::Point2D loc);
+
+protected:
+    int mHealth;
+    int mPointVal;
+    CMPUT350::RGBColor mColor = CMPUT350::Colors::green;
+    CMPUT350::GameContext* mContext = nullptr;
+    std::weak_ptr<CMPUT350::GameObject> mSelf;
+    int mNextFireFrame = 0;
+
+    enum class AttackState { Formation, Attacking, Returning };
+    CMPUT350::Bezier mAttackPath;
+    AttackState mAttackState = AttackState::Formation;
+    CMPUT350::Point2D mFormationLocation;
+    float mPathT = 0.0f;
+    float mPathSpeed = 0.03f;
+    float mRotation = 0.0f;
 };
 
 #endif

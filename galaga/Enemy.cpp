@@ -1,5 +1,8 @@
 #include "Enemy.h"
 
+#include <cmath>
+#include <cstdlib>
+
 #include "Bullet.h"
 
 // Constants
@@ -11,14 +14,20 @@ const int ENEMY_HEIGHT = 18;
 const bool DEBUG_BOXES = false;
 // Width of debug line
 const int DEBUG_LINE = 1;
-
+const float PI = 3.14159265f;
+const float ENEMY_RETURN_SPEED = 1.5f;
+const CMPUT350::Point2D ENEMY_HALF_SIZE(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
 // Members
 
-Enemy::Enemy(CMPUT350::Point2D loc) {
+Enemy::Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int pointValue) {
     // Set location
     this->mLocation = loc;
+    this->mFormationLocation = loc;
     // Set alive to true
     this->mAlive = true;
+    this->mHealth = health;
+    this->mPointVal = pointValue;
+    this->mColor = color;
     // Set bounding box
     CMPUT350::Point2D halfSize(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
     this->mBounds = CMPUT350::Rect(loc - halfSize, ENEMY_WIDTH, ENEMY_HEIGHT);
@@ -40,14 +49,67 @@ const std::vector<CMPUT350::ShapeUnion>& Enemy::GetShapes() { return this->mShap
 // so RenderForeground below draws relative to this, not in absolute coordinates
 CMPUT350::Point2D Enemy::GetLocation() const { return this->mLocation; }
 
-// Enemies don't rotate
-float Enemy::GetRotation() const { return 0.0f; }
+// Rotation follows the attack path; 0 while in formation
+float Enemy::GetRotation() const { return this->mRotation; }
 
 // Empty as constructor already did all the setup the object needs
-void Enemy::Initialize(CMPUT350::GameContext* context) {}
+void Enemy::Initialize(CMPUT350::GameContext* context) {
+    this->mContext = context;
+    this->mSelf = context->CurrObject;
+    this->mNextFireFrame = context->currentFrame + CMPUT350::RandomInt(90, 240);
+}
+
+void Enemy::StartAttack() {
+    if (this->mAttackState != AttackState::Formation ||
+        this->mAttackPath.controlPoints.size() < 4) {
+        return;
+    }
+    this->mAttackState = AttackState::Attacking;
+    this->mPathT = 0.0f;
+}
 
 // Empty as Enemies are stationary
-void Enemy::Update(CMPUT350::GameContext* context) {}
+void Enemy::Update(CMPUT350::GameContext* context) {
+    if (!this->mAlive) {
+        return;
+    }
+    if (this->mAttackState == AttackState::Attacking) {
+        this->mPathT += this->mPathSpeed;
+        int maxT = (this->mAttackPath.controlPoints.size() - 1) / 3;
+        if (this->mPathT >= maxT) {
+            this->mAttackState = AttackState::Returning;
+        } else {
+            this->mLocation = this->mAttackPath.GetPoint(this->mPathT);
+            CMPUT350::Point2D slope = this->mAttackPath.GetSlope(this->mPathT);
+            this->mRotation = std::atan2(slope.y, slope.x) + (PI / 2.0f);
+            RebuildBoundsAt(this->mLocation);
+        }
+    } else if (this->mAttackState == AttackState::Returning) {
+        CMPUT350::Point2D dir = this->mFormationLocation - this->mLocation;
+        if (dir.Distance(CMPUT350::Point2D(0, 0)) < ENEMY_RETURN_SPEED) {
+            this->mLocation = this->mFormationLocation;
+            this->mAttackState = AttackState::Formation;
+            this->mRotation = 0.0f;
+            RebuildBoundsAt(this->mLocation);
+        } else {
+            dir.Normalize();
+            this->mLocation += dir * ENEMY_RETURN_SPEED;
+            RebuildBoundsAt(this->mLocation);
+        }
+    }
+    if (context->currentFrame >= this->mNextFireFrame) {
+        FireAt(context);
+        this->mNextFireFrame = context->currentFrame + CMPUT350::RandomInt(90, 240);
+    }
+}
+
+void Enemy::FireAt(CMPUT350::GameContext* context) {
+    CMPUT350::Point2D heading;
+    heading = CMPUT350::Point2D(0.0f, 6.0f);
+    std::shared_ptr<Bullet> bullet =
+        std::make_shared<Bullet>(this->mLocation, heading, false, this->mSelf);
+    context->mEngineView->AddGameObject(bullet);
+}
 
 // Empty as nothing depends on the result of this frame's collisions
 void Enemy::LateUpdate(CMPUT350::GameContext* context) {}
@@ -63,7 +125,7 @@ void Enemy::RenderForeground(CMPUT350::GameContext* context) {
     }
     // Draw enemy as a green square, in local space — the engine has already offset
     // the draw context by GetLocation(), so mBounds (world space) would double-offset it
-    context->ScreenContext->DrawRect(mLocalBounds, CMPUT350::Colors::green);
+    context->ScreenContext->DrawRect(mLocalBounds, this->mColor);
     // Draw debug box if enabled
     if (DEBUG_BOXES) {
         context->ScreenContext->FrameRect(mLocalBounds, DEBUG_LINE, CMPUT350::Colors::yellow);
@@ -84,7 +146,16 @@ void Enemy::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj
     }
     // If it's a player bullet, kill the enemy
     if (b->IsPlayerBullet()) {
-        this->Kill();
+        this->mHealth -= 1;
+        if (this->mHealth <= 0) {
+            this->Kill();
+            // TODO: notify Galaga of the kill here,
+            // e.g. context->mNotificationManager->Notify("enemy_killed") or similar,
+            // so Galaga can award mPointValue. Enemy doesn't have `context` in
+            // CollisionEnter's signature today — either stash a reference to it on
+            // mContext (set in Initialize, see above) and use that here, or add a
+            // context param to CollisionEnter if you'd rather not rely on cached state.
+        }
     }
 }
 
@@ -96,3 +167,7 @@ bool Enemy::IsAlive() const { return this->mAlive; }
 
 // Get bounding box of enemy
 const CMPUT350::Rect& Enemy::GetBounds() { return this->mBounds; }
+
+void Enemy::RebuildBoundsAt(CMPUT350::Point2D loc) {
+    this->mBounds = CMPUT350::Rect(loc - ENEMY_HALF_SIZE, ENEMY_WIDTH, ENEMY_HEIGHT);
+}
