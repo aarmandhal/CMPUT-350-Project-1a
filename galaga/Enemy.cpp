@@ -32,7 +32,7 @@ Enemy::Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int po
     CMPUT350::Point2D halfSize(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
     this->mBounds = CMPUT350::Rect(loc - halfSize, ENEMY_WIDTH, ENEMY_HEIGHT);
 
-    // Local-space shape, centered on local origin — the engine offsets by mLocation later
+    // Local-space shape, centered on local origin
     CMPUT350::Rect localRect = CMPUT350::Rect(
         CMPUT350::Point2D(-ENEMY_WIDTH / 2.0f, -ENEMY_HEIGHT / 2.0f), ENEMY_WIDTH, ENEMY_HEIGHT);
     this->mLocalBounds = localRect;

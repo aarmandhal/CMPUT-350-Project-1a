@@ -4,8 +4,10 @@
 #include <memory>
 #include <string>
 #include "GameObject.h"
+#include <vector>
 
 class Player;
+class Enemy;
 
 class Galaga : public CMPUT350::GameObject
 {
@@ -41,11 +43,25 @@ private:
     int mCoins = 0;
     int mEnemiesRemaining = 0;
 
+    // track the current wave and enemies spawned in it
+    int mCurrentWave = 0;
+    int mEnemiesSpawned = 0;
+
     // track when the current state started
     int mStateStartFrame = 0;
 
+    // track when the player was destroyed
+    int mPlayerDeathFrame = -1;
+
+    // track when the last enemy attack started
+    int mLastAttackFrame = -1;
+    
+
     // track the player without keeping it alive
     std::weak_ptr<Player> mPlayer;
+
+    // track enemies without keeping them alive
+    std::vector<std::weak_ptr<Enemy>> mEnemies;
 };
 
 #endif

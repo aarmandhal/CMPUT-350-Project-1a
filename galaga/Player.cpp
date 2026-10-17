@@ -6,6 +6,7 @@
 #include "EngineView.h"
 #include "GameContext.h"
 #include "NotificationManager.h"
+#include "Enemy.h"
 
 Player::Player(CMPUT350::Point2D loc) {
     mLocation = loc;
@@ -101,7 +102,7 @@ void Player::ReceiveNotification(const std::string& message) {
         mFiring = true;
 
         // bullets move straight upward
-        CMPUT350::Point2D heading(0, -10);
+        CMPUT350::Vector2D heading(0, -10);
 
         // create a bullet if the first slot is free
         if (mBullet1.expired()) {
@@ -144,7 +145,28 @@ void Player::RenderForeground(CMPUT350::GameContext* context) {
     context->ScreenContext->DrawLine(bottomRight, top, 3, CMPUT350::Colors::green);
 }
 
-void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) {}
+void Player::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) {
+    // ignore collisions if the player is already dead
+    if (!mAlive) {
+        return;
+    }
+
+    // check if the collision was with a bullet
+    auto bullet = std::dynamic_pointer_cast<Bullet>(obj);
+
+    // kill the player only if it is an enemy bullet
+    if (bullet && !bullet->IsPlayerBullet()) {
+        Kill();
+    }
+
+    // kill the player if an enemy ship collides with it
+    auto enemy = std::dynamic_pointer_cast<Enemy>(obj);
+
+    if (enemy) {
+        Kill();
+    }
+
+}
 
 void Player::Kill() {
     // mark the player as dead

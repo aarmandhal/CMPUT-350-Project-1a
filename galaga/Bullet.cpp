@@ -11,9 +11,7 @@ const bool DEBUG_BOXES = false;
 // Width of debug line
 const int DEBUG_LINE = 1;
 
-Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Point2D heading, bool player,
-               std::weak_ptr<CMPUT350::GameObject> firer) {
-    // Set previous location to current location
+Bullet::Bullet(CMPUT350::Point2D location, CMPUT350::Vector2D heading, bool player, std::weak_ptr<CMPUT350::GameObject> firer) { // set previous location to current location
     this->mPrevLocation = location;
     // Set current location
     this->mCurrentLocation = location;
@@ -41,7 +39,7 @@ void Bullet::Initialize(CMPUT350::GameContext* context) {}
 // Local space means relative to mCurrentLocation, since the engine offsets by
 // GetLocation() when it transforms shapes to world space.
 void Bullet::RebuildShapes() {
-    CMPUT350::Point2D localStart = this->mPrevLocation - this->mCurrentLocation;
+    CMPUT350::Vector2D localStart = this->mPrevLocation - this->mCurrentLocation;
     CMPUT350::Point2D localEnd = CMPUT350::Point2D(0, 0);
     CMPUT350::Line localLine = CMPUT350::Line(localStart, localEnd);
 
@@ -113,7 +111,7 @@ void Bullet::RenderForeground(CMPUT350::GameContext* context) {
     // context by GetLocation() (mCurrentLocation), so drawing mPrevLocation/mCurrentLocation
     // directly (world space) would double-offset it. mCurrentLocation's local point is the
     // origin by definition; mPrevLocation's local point is the same vector RebuildShapes() uses.
-    CMPUT350::Point2D localPrev = this->mPrevLocation - this->mCurrentLocation;
+    CMPUT350::Vector2D localPrev = this->mPrevLocation - this->mCurrentLocation;
     CMPUT350::Point2D localCurrent(0, 0);
     context->ScreenContext->DrawLine(localPrev, localCurrent, LINE_WIDTH, color);
     // Draw debug box if enabled
