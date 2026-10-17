@@ -1,1 +1,78 @@
+CMPUT 350 — Project 1b: Galaga
+Team: Aarman Dhal (CCID: adhal), Bader Alqasem (CCID: balqasem)
 
+Design Decisions:
+
+Bezier: implemented as a `struct Bezier` inside engine/MathUtil.h rather
+  than a separate Bezier.h/.cpp, and its GetPoint/GetSlope aren't const.
+  The math (chained cubic segments, both instance and static call forms)
+  matches the spec; only the file location and the constructor/const-ness
+  differ.
+
+
+CollisionObject: the spec's `Shape` struct (a type tag wrapping a
+  ShapeUnion) is collapsed into one `ShapeUnion` struct that carries its own
+  `ShapeType type` field directly. GetShapes() returns
+  `vector<ShapeUnion>` instead of `vector<Shape>`. Functionally equivalent,
+  just a naming/structuring difference.
+ 
+Enemy attacks: the spec calls for a pure virtual
+  `Attack(GameContext*, const Point2D &target)` so an enemy can aim its
+  attack path at the player's current position. We instead use a
+  non-virtual `StartAttack()` with no target and no return value; each
+  enemy subclass's attack path is a fixed curve shape (translated to its
+  current formation position when the attack starts), not aimed at the
+  player's live location. [Note why, if intentional — e.g. "we chose fixed
+  attack patterns for predictability/testability" — or fix it.]
+
+=== GALAGA STATE FLOW ===
+ 
+The Galaga class owns a five-state finite state machine:
+ 
+1. Waiting — no player ship exists. Pressing 5 (Num5) adds a credit;
+   pressing 1 (Num1) with at least one credit starts the game and resets
+   score/lives/level.
+2. Startup — spawns the player ship and displays the level number for
+   ~3 seconds (90 frames) before moving on.
+3. Waves — spawns five waves of eight enemies each (one every 15 frames),
+   each wave a different enemy subtype (Weak / Mid / Strong) entering on a
+   curved Bezier path. Moves to Gameplay once all five waves have finished
+   entering formation.
+4. Gameplay — the main loop. Every 90 frames, Galaga picks the next enemy
+   in formation (round-robin, deterministic) and tells it to attack; the
+   enemy follows its own attack Bezier path, fires at the player, then
+   returns to formation. Enemies destroyed award points (double if they
+   were out of formation when killed) via an "enemy_destroyed" notification
+   Galaga listens for. When all enemies are gone, advances to the next
+   level (back to Startup) if the player is alive.
+5. Game Over — reached when lives hit 0. Shows a game-over message for
+   ~3 seconds, tears down the player and any remaining enemies, then
+   returns to Waiting.
+ 
+Player death (during Waves or Gameplay) decrements lives and, once all
+surviving enemies have returned to formation, respawns a new player after a
+short delay — unless lives are exhausted, which transitions straight to
+Game Over.
+
+
+=== TEAM CONTRIBUTIONS ===
+ 
+[Based on the branch's commit history — adjust if this doesn't reflect how
+work actually split, especially for anything done after Oct 16.]
+ 
+Aarman Dhal:
+- Core math library (Point2D, Rect, Line/Circle) in MathUtil.h
+- Bezier curve implementation
+- DrawContext (offset/rotation transform, local-to-screen conversion)
+- CollisionObject / Shape scaffolding, GetShapes() on Player/Bullet/Enemy
+- Enemy base class (health, color-on-damage, attack-path state) and the
+  three enemy subclasses (WeakEnemy / MidEnemy / StrongEnemy)
+ 
+Bader Alqasem:
+- Core GameEngine loop (update/collision/render passes), keyboard event
+  handling
+- Player movement, shooting, and screen-bounds clamping
+- Galaga class: state machine, wave spawning, scoring, UI
+- Enemy collision/shooting/scoring integration, deterministic attack
+  selection
+- Vector2D alias extra credit
