@@ -67,8 +67,15 @@ void Enemy::StartAttack() {
         this->mAttackPath.controlPoints.size() < 4) {
         return;
     }
+
     this->mAttackState = AttackState::Attacking;
     this->mPathT = 0.0f;
+
+    // schedule a shot shortly after starting an attack
+    if (this->mContext != nullptr) {
+        this->mNextFireFrame =
+            this->mContext->currentFrame + CMPUT350::RandomInt(10, 25);
+    }
 }
 
 // Empty as Enemies are stationary
@@ -100,9 +107,12 @@ void Enemy::Update(CMPUT350::GameContext* context) {
             RebuildBoundsAt(this->mLocation);
         }
     }
-    if (context->currentFrame >= this->mNextFireFrame) {
+    // only shoot while attacking
+    if (this->mAttackState == AttackState::Attacking &&
+        context->currentFrame >= this->mNextFireFrame) {
+
         FireAt(context);
-        this->mNextFireFrame = context->currentFrame + CMPUT350::RandomInt(90, 240);
+        this->mNextFireFrame = context->currentFrame + CMPUT350::RandomInt(30, 60);
     }
 }
 
@@ -150,6 +160,12 @@ void Enemy::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj
     // If it's a player bullet, kill the enemy
     if (b->IsPlayerBullet()) {
         this->mHealth -= 1;
+
+        // change color when the enemy has one health remaining
+        if (this->mHealth == 1) {
+            this->mColor = CMPUT350::Colors::red;
+        }
+
         if (this->mHealth <= 0) {
             this->Kill();
             if (this->mContext != nullptr) {

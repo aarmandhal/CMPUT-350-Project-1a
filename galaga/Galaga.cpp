@@ -82,15 +82,33 @@ void Galaga::ReceiveNotification(const std::string& message)
     }
 
     // update the score and enemy count when an enemy is destroyed
-    else if (message == "enemy_destroyed" &&
-            (mState == State::Waves || mState == State::Gameplay)) {
+    else if (message == "enemy_destroyed" && (mState == State::Waves || mState == State::Gameplay)) {
 
-        if (mEnemiesRemaining > 0) {
-            mEnemiesRemaining--;
-            mScore += 100;
+        for (size_t i = 0; i < mEnemies.size(); ) {
+                auto enemy = mEnemies[i].lock();
+
+                // check if the enemy was destroyed
+                if (enemy && !enemy->IsAlive()) {
+                    mScore += enemy->GetPointValue();
+
+                    if (mEnemiesRemaining > 0) {
+                        mEnemiesRemaining--;
+                    }
+
+                    // remove the destroyed enemy
+                    mEnemies.erase(mEnemies.begin() + i);
+                }
+                else if (!enemy) {
+                    // remove expired enemy references
+                    mEnemies.erase(mEnemies.begin() + i);
+                }
+                else {
+                    // move to the next enemy
+                    i++;
+                }
+            }
         }
     }
-}
 
 
 void Galaga::Update(CMPUT350::GameContext* context)
@@ -175,27 +193,30 @@ void Galaga::Update(CMPUT350::GameContext* context)
             mState = State::Gameplay;
             mStateStartFrame = context->currentFrame;
         }
-
-
     }
 
     // start enemy attacks during gameplay
     else if (mState == State::Gameplay) {
 
-        // start an attack every 90 frames
-        if (mLastAttackFrame == -1 ||
-            context->currentFrame - mLastAttackFrame >= 90) {
+        // only start attacks while the player is alive
+        auto player = mPlayer.lock();
 
-            // search for the next living enemy
-            for (size_t i = 0; i < mEnemies.size(); i++) {
-                size_t index = (mNextAttackIndex + i) % mEnemies.size();
-                auto enemy = mEnemies[index].lock();
+        if (player && player->IsAlive()) {
 
-                if (enemy && enemy->IsAlive()) {
-                    enemy->StartAttack();
-                    mNextAttackIndex = (index + 1) % mEnemies.size();
-                    mLastAttackFrame = context->currentFrame;
-                    break;
+            // start an attack every 90 frames
+            if (mLastAttackFrame == -1 || context->currentFrame - mLastAttackFrame >= 90) {
+
+                // search for the next living enemy
+                for (size_t i = 0; i < mEnemies.size(); i++) {
+                    size_t index = (mNextAttackIndex + i) % mEnemies.size();
+                    auto enemy = mEnemies[index].lock();
+
+                    if (enemy && enemy->IsAlive() && enemy->IsInFormation()) {
+                        enemy->StartAttack();
+                        mNextAttackIndex = (index + 1) % mEnemies.size();
+                        mLastAttackFrame = context->currentFrame;
+                        break;
+                    }
                 }
             }
         }
@@ -250,11 +271,21 @@ void Galaga::Update(CMPUT350::GameContext* context)
                 }
             }
 
+            // check if all surviving enemies have returned to formation
+            bool allInFormation = true;
+
+            for (auto& weakEnemy : mEnemies) {
+                auto enemy = weakEnemy.lock();
+
+                if (enemy && enemy->IsAlive() && !enemy->IsInFormation()) {
+                    allInFormation = false;
+                    break;
+                }
+            }
+
             // wait before respawning the player
-            if (context->currentFrame - mPlayerDeathFrame >= 90) {
-                auto newPlayer = std::make_shared<Player>(
-                    CMPUT350::Point2D(mWidth / 2, mHeight - 124)
-                );
+            if (context->currentFrame - mPlayerDeathFrame >= 90 && allInFormation) {
+                auto newPlayer = std::make_shared<Player>(CMPUT350::Point2D(mWidth / 2, mHeight - 124));
 
                 mPlayer = newPlayer;
                 context->mEngineView->AddGameObject(newPlayer);
