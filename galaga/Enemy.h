@@ -21,9 +21,11 @@ public:
     void RenderBackground(CMPUT350::GameContext* context) override;
     void RenderForeground(CMPUT350::GameContext* context) override;
 
-    // return the enemy's position and rotation
+    // return the enemy's position and rotation and point value
     CMPUT350::Point2D GetLocation() const override;
     float GetRotation() const override;
+    int GetPointValue() const { return this->mPointVal; }
+    bool IsInFormation() const { return this->mAttackState == AttackState::Formation; }
 
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;

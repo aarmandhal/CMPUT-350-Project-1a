@@ -17,6 +17,8 @@ const int DEBUG_LINE = 1;
 const float PI = 3.14159265f;
 const float ENEMY_RETURN_SPEED = 1.5f;
 const CMPUT350::Point2D ENEMY_HALF_SIZE(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
+// Broad-phase bounds are padded to the half-diagonal so a rotated enemy never pokes outside them
+const float ENEMY_BOUNDS_RADIUS = std::ceil(ENEMY_HALF_SIZE.Distance(CMPUT350::Point2D(0, 0)));
 // Members
 
 Enemy::Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int pointValue) {
@@ -29,8 +31,7 @@ Enemy::Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int po
     this->mPointVal = pointValue;
     this->mColor = color;
     // Set bounding box
-    CMPUT350::Point2D halfSize(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
-    this->mBounds = CMPUT350::Rect(loc - halfSize, ENEMY_WIDTH, ENEMY_HEIGHT);
+    this->mBounds = CMPUT350::Rect(loc, ENEMY_BOUNDS_RADIUS);
 
     // Local-space shape, centered on local origin
     CMPUT350::Rect localRect = CMPUT350::Rect(
@@ -149,12 +150,9 @@ void Enemy::CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj
         this->mHealth -= 1;
         if (this->mHealth <= 0) {
             this->Kill();
-            // TODO: notify Galaga of the kill here,
-            // e.g. context->mNotificationManager->Notify("enemy_killed") or similar,
-            // so Galaga can award mPointValue. Enemy doesn't have `context` in
-            // CollisionEnter's signature today — either stash a reference to it on
-            // mContext (set in Initialize, see above) and use that here, or add a
-            // context param to CollisionEnter if you'd rather not rely on cached state.
+            if (this->mContext != nullptr) {
+                this->mContext->mNotificationManager->Notify("enemy_destroyed");
+            }
         }
     }
 }
@@ -169,5 +167,5 @@ bool Enemy::IsAlive() const { return this->mAlive; }
 const CMPUT350::Rect& Enemy::GetBounds() { return this->mBounds; }
 
 void Enemy::RebuildBoundsAt(CMPUT350::Point2D loc) {
-    this->mBounds = CMPUT350::Rect(loc - ENEMY_HALF_SIZE, ENEMY_WIDTH, ENEMY_HEIGHT);
+    this->mBounds = CMPUT350::Rect(loc, ENEMY_BOUNDS_RADIUS);
 }
