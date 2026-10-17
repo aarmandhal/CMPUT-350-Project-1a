@@ -113,7 +113,7 @@ void Galaga::ReceiveNotification(const std::string& message)
                     // remove expired enemy references
                     mEnemies.erase(mEnemies.begin() + i);
                 }
-                
+
                 else {
                     // move to the next enemy
                     i++;
@@ -340,8 +340,8 @@ void Galaga::RenderUI(CMPUT350::GameContext* context)
     gui->DrawText("Level: " + std::to_string(mLevel), 24, {mWidth - 150.0f, 20}, CMPUT350::Colors::white);
 
     // show the remaining lives
-    gui->DrawText("Lives: " + std::to_string(mLives), 24, {20, mHeight - 40.0f}, CMPUT350::Colors::white);
-
+    gui->DrawText("Lives: " + std::to_string(mLives), 24, {20, 60}, CMPUT350::Colors::white);
+    
     // show instructions while waiting for the game
     if (mState == State::Waiting) {
         gui->DrawCenteredText("Credits: " + std::to_string(mCoins), 24, {mWidth / 2.0f, mHeight / 2.0f - 50}, CMPUT350::Colors::white);
