@@ -7,6 +7,9 @@
 #include "Stars.h"
 #include "DrawContext.h"
 #include "Enemy.h"
+#include "WeakEnemy.h"
+#include "MidEnemy.h"
+#include "StrongEnemy.h"
 
 // save the game window dimensions
 Galaga::Galaga(int width, int height)
@@ -134,9 +137,24 @@ void Galaga::Update(CMPUT350::GameContext* context)
             float x = mWidth / 2.0f - 70 + mEnemiesSpawned * 20;
             float y = 100 + mCurrentWave * 35;
 
-            auto enemy = std::make_shared<Enemy>(
-                CMPUT350::Point2D(x, y)
-            );
+            std::shared_ptr<Enemy> enemy;
+
+            // choose the enemy type based on the wave
+            if (mCurrentWave == 0) {
+                enemy = std::make_shared<WeakEnemy>(
+                    CMPUT350::Point2D(x, y)
+                );
+            }
+            else if (mCurrentWave == 1) {
+                enemy = std::make_shared<MidEnemy>(
+                    CMPUT350::Point2D(x, y)
+                );
+            }
+            else {
+                enemy = std::make_shared<StrongEnemy>(
+                    CMPUT350::Point2D(x, y)
+                );
+            }
 
             context->mEngineView->AddGameObject(enemy);
             mEnemies.push_back(enemy);
@@ -155,6 +173,28 @@ void Galaga::Update(CMPUT350::GameContext* context)
         if (mCurrentWave == 5) {
             mState = State::Gameplay;
             mStateStartFrame = context->currentFrame;
+        }
+
+
+    }
+
+    // start enemy attacks during gameplay
+    else if (mState == State::Gameplay) {
+
+        // start an attack every 90 frames
+        if (mLastAttackFrame == -1 ||
+            context->currentFrame - mLastAttackFrame >= 90) {
+
+            // find an enemy that is still alive
+            for (auto& weakEnemy : mEnemies) {
+                auto enemy = weakEnemy.lock();
+
+                if (enemy && enemy->IsAlive()) {
+                    enemy->StartAttack();
+                    mLastAttackFrame = context->currentFrame;
+                    break;
+                }
+            }
         }
     }
 
