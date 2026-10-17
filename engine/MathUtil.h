@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 
@@ -378,6 +379,8 @@ struct Bezier {
                (6 * (1 - localT) * localT * (p3 - p2)) + (3 * (localT * localT) * (p4 - p3));
     };
 };
+
+inline int RandomInt(int low, int high) { return low + rand() % (high - low); }
 
 }  // namespace CMPUT350
 
