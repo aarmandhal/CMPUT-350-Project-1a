@@ -26,6 +26,7 @@ public:
     float GetRotation() const override;
     int GetPointValue() const { return this->mPointVal; }
     bool IsInFormation() const { return this->mAttackState == AttackState::Formation; }
+    bool IsEntering() const { return this->mAttackState == AttackState::Entering; }
 
     // Collision Object Functions
     void CollisionEnter(const std::shared_ptr<CMPUT350::CollisionObject>& obj) override;
@@ -54,12 +55,17 @@ protected:
     std::weak_ptr<CMPUT350::GameObject> mSelf;
     int mNextFireFrame = 0;
 
-    enum class AttackState { Formation, Attacking, Returning };
+    enum class AttackState { Entering, Formation, Attacking, Returning };
     CMPUT350::Bezier mAttackPath;
-    AttackState mAttackState = AttackState::Formation;
+    CMPUT350::Bezier mEntryPath;
+
+    AttackState mAttackState = AttackState::Entering;
+
     CMPUT350::Point2D mFormationLocation;
     // Current Bezier parameter along the attack path
     float mPathT = 0.0f;
+    float mEntryT = 0.0f;
+    float mEntrySpeed = 0.02f;
     // Constant spatial speed along the attack path, in pixels per frame
     float mDesiredPixelSpeed = 3.0f;
     float mRotation = 0.0f;

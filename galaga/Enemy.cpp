@@ -16,7 +16,7 @@ const bool DEBUG_BOXES = false;
 // Width of debug line
 const int DEBUG_LINE = 1;
 const float PI = 3.14159265f;
-const float ENEMY_RETURN_SPEED = 1.5f;
+const float ENEMY_RETURN_SPEED = 5.0f;
 const CMPUT350::Point2D ENEMY_HALF_SIZE(ENEMY_WIDTH / 2.0f, ENEMY_HEIGHT / 2.0f);
 // Broad-phase bounds are padded to the half-diagonal so a rotated enemy never pokes outside them
 const float ENEMY_BOUNDS_RADIUS = std::ceil(ENEMY_HALF_SIZE.Distance(CMPUT350::Point2D(0, 0)));
@@ -24,16 +24,26 @@ const float ENEMY_BOUNDS_RADIUS = std::ceil(ENEMY_HALF_SIZE.Distance(CMPUT350::P
 
 Enemy::Enemy(CMPUT350::Point2D loc, CMPUT350::RGBColor color, int health, int pointValue) {
     // Set location
-    this->mLocation = loc;
     this->mFormationLocation = loc;
+
+    // start the enemy above the screen
+    this->mLocation = CMPUT350::Point2D(loc.x - 100, -50);
+
+    // create a curved path into formation
+    this->mEntryPath.controlPoints = {
+        this->mLocation,
+        CMPUT350::Point2D(loc.x - 150, 100),
+        CMPUT350::Point2D(loc.x + 100, 200),
+        loc
+    };
+
     // Set alive to true
     this->mAlive = true;
     this->mHealth = health;
     this->mPointVal = pointValue;
     this->mColor = color;
     // Set bounding box
-    this->mBounds = CMPUT350::Rect(loc, ENEMY_BOUNDS_RADIUS);
-
+    this->mBounds = CMPUT350::Rect(this->mLocation, ENEMY_BOUNDS_RADIUS);
     // Local-space shape, centered on local origin
     CMPUT350::Rect localRect = CMPUT350::Rect(
         CMPUT350::Point2D(-ENEMY_WIDTH / 2.0f, -ENEMY_HEIGHT / 2.0f), ENEMY_WIDTH, ENEMY_HEIGHT);
@@ -67,6 +77,13 @@ void Enemy::StartAttack() {
         return;
     }
 
+    // adjust the attack path to start at the current position
+    CMPUT350::Point2D offset = this->mLocation - this->mAttackPath.controlPoints[0];
+
+    for (auto& point : this->mAttackPath.controlPoints) {
+        point += offset;
+    }
+
     this->mAttackState = AttackState::Attacking;
     this->mPathT = 0.0f;
 
@@ -76,12 +93,60 @@ void Enemy::StartAttack() {
     }
 }
 
-// Empty as Enemies are stationary
+// update enemy movement and shooting
 void Enemy::Update(CMPUT350::GameContext* context) {
     if (!this->mAlive) {
         return;
     }
-    if (this->mAttackState == AttackState::Attacking) {
+    if (this->mAttackState == AttackState::Entering) {
+
+        // calculate the slope of the entry curve
+        CMPUT350::Point2D entrySlope = this->mEntryPath.GetSlope(this->mEntryT);
+
+        // calculate the slope magnitude
+        float entrySlopeMagnitude = entrySlope.Distance(CMPUT350::Point2D(0, 0));
+
+        // move at approximately constant speed
+        if (entrySlopeMagnitude > 0.0001f) {
+            this->mEntryT += 3.0f / entrySlopeMagnitude;
+        }
+
+        // check if the enemy reached formation
+        if (this->mEntryT >= 1.0f) {
+            this->mEntryT = 1.0f;
+            this->mLocation = this->mFormationLocation;
+            this->mAttackState = AttackState::Formation;
+            this->mRotation = 0.0f;
+        }
+        else {
+            // get the position on the entry curve
+            this->mLocation = this->mEntryPath.GetPoint(this->mEntryT);
+
+            // rotate based on the movement direction
+            CMPUT350::Point2D slope = this->mEntryPath.GetSlope(this->mEntryT);
+            this->mRotation = std::atan2(slope.y, slope.x) + (PI / 2.0f);
+        }
+
+        // update the collision bounds
+        RebuildBoundsAt(this->mLocation);
+    }
+
+    else if (this->mAttackState == AttackState::Formation) {
+
+        // move left and right while in formation
+        float offset = std::sin(context->currentFrame * 0.03f) * 5.0f;
+
+        this->mLocation = this->mFormationLocation;
+        this->mLocation.x += offset;
+
+        // keep the enemy facing forward
+        this->mRotation = 0.0f;
+
+        // update collision bounds
+        RebuildBoundsAt(this->mLocation);
+    }
+
+    else if (this->mAttackState == AttackState::Attacking) {
         // Step t by distance / ||B'(t)|| so the enemy moves a constant number of pixels per frame
         CMPUT350::Point2D slope = this->mAttackPath.GetSlope(this->mPathT);
         float slopeMagnitude = slope.Distance(CMPUT350::Point2D(0, 0));
@@ -98,7 +163,9 @@ void Enemy::Update(CMPUT350::GameContext* context) {
             this->mRotation = std::atan2(slope.y, slope.x) + (PI / 2.0f);
             RebuildBoundsAt(this->mLocation);
         }
-    } else if (this->mAttackState == AttackState::Returning) {
+    } 
+    
+    else if (this->mAttackState == AttackState::Returning) {
         CMPUT350::Point2D dir = this->mFormationLocation - this->mLocation;
         if (dir.Distance(CMPUT350::Point2D(0, 0)) < ENEMY_RETURN_SPEED) {
             this->mLocation = this->mFormationLocation;

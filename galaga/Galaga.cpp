@@ -202,37 +202,24 @@ void Galaga::Update(CMPUT350::GameContext* context)
 
         // enter gameplay after all five waves
         if (mCurrentWave == 5) {
+            bool allEntered = true;
+
+            for (auto& weakEnemy : mEnemies) {
+                auto enemy = weakEnemy.lock();
+
+                if (enemy && enemy->IsAlive() && enemy->IsEntering()) {
+                    allEntered = false;
+                    break;
+                }
+            }
+            
+        // start gameplay when all surviving enemies finish entering
+        if (allEntered) {
             mState = State::Gameplay;
             mStateStartFrame = context->currentFrame;
         }
     }
-
-    // start enemy attacks during gameplay
-    else if (mState == State::Gameplay) {
-
-        // only start attacks while the player is alive
-        auto player = mPlayer.lock();
-
-        if (player && player->IsAlive()) {
-
-            // start an attack every 90 frames
-            if (mLastAttackFrame == -1 || context->currentFrame - mLastAttackFrame >= 90) {
-
-                // search for the next living enemy
-                for (size_t i = 0; i < mEnemies.size(); i++) {
-                    size_t index = (mNextAttackIndex + i) % mEnemies.size();
-                    auto enemy = mEnemies[index].lock();
-
-                    if (enemy && enemy->IsAlive() && enemy->IsInFormation()) {
-                        enemy->StartAttack();
-                        mNextAttackIndex = (index + 1) % mEnemies.size();
-                        mLastAttackFrame = context->currentFrame;
-                        break;
-                    }
-                }
-            }
-        }
-    }
+}
 
     // show game over before returning to the waiting screen
     else if (mState == State::GameOver) {
@@ -262,6 +249,35 @@ void Galaga::Update(CMPUT350::GameContext* context)
             // return to the waiting screen
             mState = State::Waiting;
             mStateStartFrame = -1;
+        }
+    }
+
+    // start enemy attacks during waves and gameplay
+    if (mState == State::Waves || mState == State::Gameplay) {
+
+        // only attack while the player is alive
+        auto player = mPlayer.lock();
+
+        if (player && player->IsAlive()) {
+
+            // select an enemy every 90 frames
+            if (mLastAttackFrame == -1 ||
+                context->currentFrame - mLastAttackFrame >= 90) {
+
+                // find the next available enemy
+                for (size_t i = 0; i < mEnemies.size(); i++) {
+                    size_t index = (mNextAttackIndex + i) % mEnemies.size();
+                    auto enemy = mEnemies[index].lock();
+
+                    // only enemies in formation can attack
+                    if (enemy && enemy->IsAlive() && enemy->IsInFormation()) {
+                        enemy->StartAttack();
+                        mNextAttackIndex = (index + 1) % mEnemies.size();
+                        mLastAttackFrame = context->currentFrame;
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -318,6 +334,8 @@ void Galaga::Update(CMPUT350::GameContext* context)
             // reset the wave counters
             mCurrentWave = 0;
             mEnemiesSpawned = 0;
+            mLastAttackFrame = -1;
+            mNextAttackIndex = 0;
 
             // return to startup for the next level
             mState = State::Startup;
@@ -326,8 +344,6 @@ void Galaga::Update(CMPUT350::GameContext* context)
     }
 
 }
-
-
 
 void Galaga::RenderUI(CMPUT350::GameContext* context)
 {
@@ -341,7 +357,7 @@ void Galaga::RenderUI(CMPUT350::GameContext* context)
 
     // show the remaining lives
     gui->DrawText("Lives: " + std::to_string(mLives), 24, {20, 60}, CMPUT350::Colors::white);
-    
+
     // show instructions while waiting for the game
     if (mState == State::Waiting) {
         gui->DrawCenteredText("Credits: " + std::to_string(mCoins), 24, {mWidth / 2.0f, mHeight / 2.0f - 50}, CMPUT350::Colors::white);
