@@ -5,6 +5,8 @@
 
 #include "Bullet.h"
 
+#include "NotificationManager.h"
+
 // Constants
 // Width of enemy
 const int ENEMY_WIDTH = 18;

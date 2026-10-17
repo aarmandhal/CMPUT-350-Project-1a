@@ -72,6 +72,7 @@ void Galaga::ReceiveNotification(const std::string& message)
         mEnemiesSpawned = 0;
         mPlayerDeathFrame = -1;
         mLastAttackFrame = -1;
+        mNextAttackIndex = 0;
 
         // move to the startup state
         mState = State::Startup;
@@ -185,12 +186,14 @@ void Galaga::Update(CMPUT350::GameContext* context)
         if (mLastAttackFrame == -1 ||
             context->currentFrame - mLastAttackFrame >= 90) {
 
-            // find an enemy that is still alive
-            for (auto& weakEnemy : mEnemies) {
-                auto enemy = weakEnemy.lock();
+            // search for the next living enemy
+            for (size_t i = 0; i < mEnemies.size(); i++) {
+                size_t index = (mNextAttackIndex + i) % mEnemies.size();
+                auto enemy = mEnemies[index].lock();
 
                 if (enemy && enemy->IsAlive()) {
                     enemy->StartAttack();
+                    mNextAttackIndex = (index + 1) % mEnemies.size();
                     mLastAttackFrame = context->currentFrame;
                     break;
                 }

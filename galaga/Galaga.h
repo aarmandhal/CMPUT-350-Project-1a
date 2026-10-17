@@ -55,6 +55,9 @@ private:
 
     // track when the last enemy attack started
     int mLastAttackFrame = -1;
+
+    // track which enemy should attack next
+    size_t mNextAttackIndex = 0;
     
 
     // track the player without keeping it alive
